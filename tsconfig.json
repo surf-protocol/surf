@@ -1,0 +1,11 @@
+{
+  "compilerOptions": {
+    "types": ["node"],
+    "lib": ["ES2021"],
+    "module": "ESNext",
+    "target": "es6",
+    "esModuleInterop": true,
+    "moduleResolution": "node"
+  }
+}
+          

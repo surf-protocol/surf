@@ -1,0 +1,18 @@
+[features]
+seeds = false
+skip-lint = false
+[programs.localnet]
+surf_protocol = "BwsVJd1hBE8q1L6fdLeEkm6QnFhgr5wBxW9pnEY5zzvT"
+
+[registry]
+url = "https://api.apr.dev"
+
+[provider]
+cluster = "localnet"
+wallet = "~/.config/solana/id.json"
+
+[scripts]
+test = "npm run test"
+
+[test.validator]
+url = 'http://localhost:8899'
