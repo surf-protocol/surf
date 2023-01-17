@@ -2,7 +2,7 @@
 seeds = false
 skip-lint = false
 [programs.localnet]
-surf_protocol = "BwsVJd1hBE8q1L6fdLeEkm6QnFhgr5wBxW9pnEY5zzvT"
+surf = "FjWGJ4ecVHR9R39kaGZJcRs4rcBcjDzckvjA7WSBmLsE"
 
 [registry]
 url = "https://api.apr.dev"
@@ -13,6 +13,14 @@ wallet = "~/.config/solana/id.json"
 
 [scripts]
 test = "npm run test"
+validator = "chmod +x ./scripts/solana-test-validator.sh && ./scripts/solana-test-validator.sh"
+build-watch = "find programs/surf | entr -c anchor build"
+test-fresh = "anchor deploy && npm run test"
 
-[test.validator]
-url = 'http://localhost:8899'
+[[test.genesis]]
+address = "dRiftyHA39MWEi3m9aunc5MzRF1JYuBsbn6VPcn33UH"
+program = "./cpi-programs/drift.so"
+
+[[test.genesis]]
+address = "whirLbMiicVdio4qvUfM5KAg6Ct8VwpYzGff3uctyCc"
+program = "./cpi-programs/whirlpool.so"

@@ -3,11 +3,11 @@ import dotenv from 'dotenv'
 import { Keypair } from '@solana/web3.js'
 import { setProvider, AnchorProvider, workspace, Program } from '@project-serum/anchor'
 
-import { SurfProtocol } from '../../target/types/surf_protocol.js'
+import { Surf } from '../../target/types/surf.js'
 
 dotenv.config()
 
-export const program = workspace.SurfProtocol as Program<SurfProtocol>
+export const program = workspace.Surf as Program<Surf>
 export const provider = AnchorProvider.env()
 setProvider(provider)
 
