@@ -2,4 +2,7 @@
 
 rm -rf ./test-ledger
 
-solana-test-validator --bpf-program whirLbMiicVdio4qvUfM5KAg6Ct8VwpYzGff3uctyCc ./cpi-programs/whirlpool.so --bpf-program dRiftyHA39MWEi3m9aunc5MzRF1JYuBsbn6VPcn33UH ./cpi-programs/drift.so
+WHIRLPOOL="--bpf-program whirLbMiicVdio4qvUfM5KAg6Ct8VwpYzGff3uctyCc ./cpi-programs/whirlpool.so"
+DRIFT="--bpf-program dRiftyHA39MWEi3m9aunc5MzRF1JYuBsbn6VPcn33UH ./cpi-programs/drift.so"
+
+solana-test-validator $WHIRLPOOL $DRIFT

@@ -7,53 +7,13 @@ import {
 	TickUtil,
 	PriceMath,
 } from '@orca-so/whirlpools-sdk'
-import { AnchorProvider } from '@project-serum/anchor'
+import { AnchorProvider } from '@coral-xyz/anchor'
 import { getAssociatedTokenAddressSync } from '@solana/spl-token'
-import { NATIVE_MINT, TOKEN_PROGRAM_ID, createInitializeMintInstruction } from '@solana/spl-token'
-import { LAMPORTS_PER_SOL, Keypair, Connection, SystemProgram, PublicKey } from '@solana/web3.js'
+import { Keypair, Connection, PublicKey } from '@solana/web3.js'
 import Decimal from 'decimal.js'
 
-import { buildAndSendTx } from './transaction.js'
-
-const nonNativeMintKeyPair = new Keypair()
-const getSortedMints = (): [PublicKey, number][] => {
-	const tokenBMint = nonNativeMintKeyPair.publicKey
-	const tokenBDecimals = 6
-
-	if (Buffer.compare(NATIVE_MINT.toBuffer(), tokenBMint.toBuffer()) < 0) {
-		return [
-			[NATIVE_MINT, LAMPORTS_PER_SOL],
-			[tokenBMint, tokenBDecimals],
-		]
-	}
-	return [
-		[tokenBMint, tokenBDecimals],
-		[NATIVE_MINT, LAMPORTS_PER_SOL],
-	]
-}
-
-const [[tokenAMint, tokenADecimals], [tokenBMint, tokenBDecimals]] = getSortedMints()
-export { tokenAMint, tokenADecimals, tokenBMint, tokenBDecimals }
-
-const createTokenBMint = async (connection: Connection, wallet: Keypair) => {
-	const ixs = [
-		SystemProgram.createAccount({
-			fromPubkey: wallet.publicKey,
-			newAccountPubkey: tokenBMint,
-			space: 82,
-			lamports: await connection.getMinimumBalanceForRentExemption(82),
-			programId: TOKEN_PROGRAM_ID,
-		}),
-		createInitializeMintInstruction(
-			tokenBMint,
-			tokenBDecimals,
-			wallet.publicKey,
-			PublicKey.default,
-			TOKEN_PROGRAM_ID,
-		),
-	]
-	await buildAndSendTx(connection, [wallet, nonNativeMintKeyPair], ixs)
-}
+import { buildAndSendTx } from '../transaction.js'
+import { tokenAMint, tokenBMint } from '../mint.js'
 
 export const DEFAULT_POOL_PRICE = 20
 export const DEFAULT_POOL_SQRT_PRICE = MathUtil.toX64(new Decimal(DEFAULT_POOL_PRICE))
@@ -125,10 +85,7 @@ export const initWhirlpool = async (
 	})
 
 	const tickCurrentIndex = PriceMath.sqrtPriceX64ToTickIndex(DEFAULT_POOL_SQRT_PRICE)
-	const startTick = TickUtil.getStartTickIndex(
-		tickCurrentIndex,
-		DEFAULT_TICK_SPACING,
-	)
+	const startTick = TickUtil.getStartTickIndex(tickCurrentIndex, DEFAULT_TICK_SPACING)
 	const tickArrayPda = PDAUtil.getTickArray(
 		ORCA_WHIRLPOOL_PROGRAM_ID,
 		whirlpoolPDA.publicKey,
@@ -141,7 +98,6 @@ export const initWhirlpool = async (
 		funder: wallet.publicKey,
 	})
 
-	await createTokenBMint(connection, wallet)
 	await buildAndSendTx(
 		connection,
 		[
@@ -161,15 +117,11 @@ export const initWhirlpool = async (
 
 const getPositionTickIndexes = (upperPrice: number, lowerPrice: number) => {
 	const tickUpperIndex = TickUtil.getInitializableTickIndex(
-		PriceMath.sqrtPriceX64ToTickIndex(
-			MathUtil.toX64(new Decimal(upperPrice)),
-		),
+		PriceMath.sqrtPriceX64ToTickIndex(MathUtil.toX64(new Decimal(upperPrice))),
 		DEFAULT_TICK_SPACING,
 	)
 	const tickLowerIndex = TickUtil.getInitializableTickIndex(
-		PriceMath.sqrtPriceX64ToTickIndex(
-			MathUtil.toX64(new Decimal(lowerPrice)),
-		),
+		PriceMath.sqrtPriceX64ToTickIndex(MathUtil.toX64(new Decimal(lowerPrice))),
 		DEFAULT_TICK_SPACING,
 	)
 	return { tickUpperIndex, tickLowerIndex }

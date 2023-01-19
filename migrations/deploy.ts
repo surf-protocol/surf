@@ -3,7 +3,7 @@
 // configured from the workspace's Anchor.toml.
 
 // eslint-disable-next-line @typescript-eslint/no-var-requires
-const anchor = require('@project-serum/anchor')
+const anchor = require('@coral-xyz/anchor')
 
 module.exports = async function (provider) {
 	// Configure client to use the provider.

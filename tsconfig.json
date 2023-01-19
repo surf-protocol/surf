@@ -3,9 +3,10 @@
     "types": ["node"],
     "lib": ["ES2021"],
     "module": "ESNext",
-    "target": "es6",
+    "target": "ESNext",
     "esModuleInterop": true,
-    "moduleResolution": "node"
+    "moduleResolution": "node",
+    "resolveJsonModule": true
   }
 }
           

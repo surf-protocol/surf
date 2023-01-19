@@ -1,10 +1,11 @@
-import { Connection, Keypair, Signer, TransactionInstruction } from '@solana/web3.js'
+import { Connection, Signer, TransactionInstruction } from '@solana/web3.js'
 import { buildAndSignTxFromInstructions, sendTransaction } from 'solana-tx-utils'
 
 export const buildAndSendTx = async (
 	connection: Connection,
 	signers: Signer[],
 	instructions: TransactionInstruction[],
+	log = false,
 ) => {
 	const txData = await buildAndSignTxFromInstructions(
 		{
@@ -19,7 +20,7 @@ export const buildAndSendTx = async (
 			...txData,
 			connection,
 		},
-		{ log: true },
+		{ log },
 	)
 	return res
 }

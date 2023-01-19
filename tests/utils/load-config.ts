@@ -1,12 +1,14 @@
 import fs from 'node:fs'
 import dotenv from 'dotenv'
 import { Keypair } from '@solana/web3.js'
-import { setProvider, AnchorProvider, workspace, Program } from '@project-serum/anchor'
+import { setProvider, AnchorProvider, workspace, Program } from '@coral-xyz/anchor'
 
 import { Surf } from '../../target/types/surf.js'
+import { Pyth } from '../../target/types/pyth.js'
 
 dotenv.config()
 
+export const pythProgram = workspace.Pyth as Program<Pyth>
 export const program = workspace.Surf as Program<Surf>
 export const provider = AnchorProvider.env()
 setProvider(provider)
