@@ -16,7 +16,7 @@ wallet = "~/.config/solana/id.json"
 test = "npm run test"
 
 validator = "chmod +x ./scripts/solana-test-validator.sh && ./scripts/solana-test-validator.sh"
-build-watch = "find programs | entr -c anchor build"
+build-watch = "chmod +x ./scripts/anchor-build.sh && find programs | entr -c ./scripts/anchor-build.sh"
 test-new = "anchor deploy && npm run test"
 
 [[test.genesis]]

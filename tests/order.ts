@@ -6,4 +6,3 @@ await connection.requestAirdrop(wallet.publicKey, 1_000_000 * LAMPORTS_PER_SOL)
 
 import './initialize-admin-config.test.js'
 import './initialize-vault.test'
-

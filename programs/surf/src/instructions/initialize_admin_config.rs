@@ -4,7 +4,6 @@ use crate::state::AdminConfig;
 use crate::Program;
 
 pub fn handler(ctx: Context<InitializeAdminConfig>) -> Result<()> {
-    // Can be safely unwrapped, anchor checks if admin_config account was provided
     let admin_config_bump = ctx.bumps.get("admin_config").unwrap();
     let admin_key = ctx.accounts.admin.key();
     ctx.accounts.admin_config.set_inner(AdminConfig {
@@ -17,7 +16,7 @@ pub fn handler(ctx: Context<InitializeAdminConfig>) -> Result<()> {
 #[derive(Accounts)]
 pub struct InitializeAdminConfig<'info> {
     #[account(init,
-        seeds = [AdminConfig::SEED.as_ref()],
+        seeds = [AdminConfig::NAMESPACE.as_ref()],
         space = AdminConfig::LEN,
         payer = admin,
         bump

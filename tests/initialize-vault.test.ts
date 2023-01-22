@@ -14,7 +14,7 @@ import { buildAndSendTx } from './utils/transaction.js'
 import { tokenAMint, tokenBMint, createUsdcMint } from './utils/mint.js'
 import { DRIFT_PROGRAM_ID, fetchUserStats, initDrift } from './utils/cpi/drift.js'
 
-describe.only('initialize_vault', () => {
+describe('initialize_vault', () => {
 	beforeAll(async () => {
 		await createUsdcMint(connection, wallet)
 	})
@@ -38,7 +38,7 @@ describe.only('initialize_vault', () => {
 		const { stateAccountAddress, driftProgram } = await initDrift()
 		const { whirlpool } = await initWhirlpool(connection, wallet, provider)
 
-		const [vaultPDA] = PublicKey.findProgramAddressSync(
+		const [vaultPDA, vaultBump] = PublicKey.findProgramAddressSync(
 			[Buffer.from('vault', 'utf-8'), whirlpool.toBuffer()],
 			program.programId,
 		)
@@ -48,10 +48,10 @@ describe.only('initialize_vault', () => {
 			getAssociatedTokenAddressSync(tokenBMint, vaultPDA, true),
 		]
 
-		const upperPrice = DEFAULT_POOL_PRICE * 1.05
-		const lowerPrice = DEFAULT_POOL_PRICE * 0.95
-		const { positionATA, positionMintKeyPair, positionPDA, tickLowerIndex, tickUpperIndex } =
-			getOpenPositionData(vaultPDA, upperPrice, lowerPrice)
+		// const upperPrice = DEFAULT_POOL_PRICE * 1.05
+		// const lowerPrice = DEFAULT_POOL_PRICE * 0.95
+		// const { positionATA, positionMintKeyPair, positionPDA, tickLowerIndex, tickUpperIndex } =
+		// 	getOpenPositionData(vaultPDA, upperPrice, lowerPrice)
 
 		const [userStatsPDA, userStatsBumps] = PublicKey.findProgramAddressSync(
 			[Buffer.from('user_stats', 'utf-8'), adminConfigPDA.toBuffer()],
@@ -69,27 +69,29 @@ describe.only('initialize_vault', () => {
 			DRIFT_PROGRAM_ID,
 		)
 
+		const fullTickRange = 800 // 8%
+		const vaultTickRange = 400 // 4%
+		const hedgeTickRange = 20 // 0.2% - 10 times per one side of vault range
+
 		const ix = await program.methods
 			.initializeVault(
-				{ position: positionPDA.bump, userStats: userStatsBumps, user: userBump },
+				{ userStats: userStatsBumps, user: userBump },
 				userSubAccountId,
-				tickLowerIndex,
-				tickUpperIndex,
+				fullTickRange,
+				vaultTickRange,
+				hedgeTickRange,
 			)
 			.accounts({
 				admin: wallet.publicKey,
 				adminConfig: adminConfigPDA,
 				vault: vaultPDA,
 				whirlpool: whirlpool,
-				positionMint: positionMintKeyPair.publicKey,
-				position: positionPDA.publicKey,
-				positionTokenAccount: positionATA,
 				tokenMintA: tokenAMint,
 				tokenMintB: tokenBMint,
 				tokenVaultA: tokenAVault,
 				tokenVaultB: tokenBVault,
-				driftUserStats: userStatsPDA,
-				driftUser: userPDA,
+				driftStats: userStatsPDA,
+				driftSubaccount: userPDA,
 				driftState: stateAccountAddress,
 
 				whirlpoolProgram: ORCA_WHIRLPOOL_PROGRAM_ID,
@@ -103,21 +105,34 @@ describe.only('initialize_vault', () => {
 
 		await buildAndSendTx(
 			connection,
-			[wallet, positionMintKeyPair],
+			[wallet],
 			[ComputeBudgetProgram.setComputeUnitLimit({ units: 1_400_000 }), ix],
 			true,
 		)
 
-		const vaultAccount = await program.account.vault.fetch(vaultPDA)
+		const vaultAccount = await program.account.vault.fetchNullable(vaultPDA)
+
+		expect(vaultAccount.bump).toBe(vaultBump)
+
+		expect(vaultAccount.whirlpool.equals(whirlpool)).toBe(true)
+		expect(vaultAccount.vaultPosition.equals(PublicKey.default)).toBe(true)
 
 		expect(vaultAccount.tokenMintA.equals(tokenAMint)).toBe(true)
 		expect(vaultAccount.tokenMintB.equals(tokenBMint)).toBe(true)
 		expect(vaultAccount.tokenVaultA.equals(tokenAVault)).toBe(true)
 		expect(vaultAccount.tokenVaultB.equals(tokenBVault)).toBe(true)
-		expect(vaultAccount.whirlpool.equals(whirlpool)).toBe(true)
-		expect(vaultAccount.whirlpoolPosition.equals(positionPDA.publicKey)).toBe(true)
 
-		expect(vaultAccount.driftAccountStats.equals(userStatsPDA)).toBe(true)
+		expect(vaultAccount.driftStats.equals(userStatsPDA)).toBe(true)
 		expect(vaultAccount.driftSubaccount.equals(userPDA)).toBe(true)
+
+		expect(vaultAccount.liquidity.toNumber()).toBe(0)
+		expect(vaultAccount.totalFeeGrowthA.toNumber()).toBe(0)
+		expect(vaultAccount.totalFeeGrowthB.toNumber()).toBe(0)
+		expect(vaultAccount.feeUnclaimedA.toNumber()).toBe(0)
+		expect(vaultAccount.feeUnclaimedB.toNumber()).toBe(0)
+
+		expect(vaultAccount.fullTickRange).toBe(fullTickRange)
+		expect(vaultAccount.vaultTickRange).toBe(vaultTickRange)
+		expect(vaultAccount.hedgeTickRange).toBe(hedgeTickRange)
 	})
 })

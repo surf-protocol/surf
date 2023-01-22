@@ -5,6 +5,7 @@ declare_id!("FjWGJ4ecVHR9R39kaGZJcRs4rcBcjDzckvjA7WSBmLsE");
 pub mod errors;
 pub mod instructions;
 pub mod state;
+pub mod utils;
 
 use instructions::*;
 
@@ -18,17 +19,19 @@ pub mod surf {
 
     pub fn initialize_vault(
         ctx: Context<InitializeVault>,
-        bumps: InitVaultBumps,
+        bumps: DriftAccountsBumps,
         drift_subaccount_id: u16,
-        tick_lower_index: i32,
-        tick_upper_index: i32,
+        full_tick_range: u32,
+        vault_tick_range: u32,
+        hedge_tick_range: u32,
     ) -> Result<()> {
         initialize_vault::handler(
             ctx,
             bumps,
             drift_subaccount_id,
-            tick_lower_index,
-            tick_upper_index,
+            full_tick_range,
+            vault_tick_range,
+            hedge_tick_range,
         )
     }
 }

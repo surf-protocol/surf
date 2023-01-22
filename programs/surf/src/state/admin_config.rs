@@ -9,5 +9,5 @@ pub struct AdminConfig {
 
 impl AdminConfig {
     pub const LEN: usize = 8 + 33;
-    pub const SEED: &'static [u8; 12] = b"admin_config";
+    pub const NAMESPACE: &'static [u8; 12] = b"admin_config";
 }
