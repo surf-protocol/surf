@@ -114,12 +114,6 @@ export type Surf = {
       ],
       "args": [
         {
-          "name": "bumps",
-          "type": {
-            "defined": "DriftAccountsBumps"
-          }
-        },
-        {
           "name": "driftSubaccountId",
           "type": "u16"
         },
@@ -134,6 +128,85 @@ export type Surf = {
         {
           "name": "hedgeTickRange",
           "type": "u32"
+        }
+      ]
+    },
+    {
+      "name": "openWhirlpoolPosition",
+      "accounts": [
+        {
+          "name": "payer",
+          "isMut": true,
+          "isSigner": true
+        },
+        {
+          "name": "whirlpool",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "vault",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "vaultPosition",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "whirlpoolPosition",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "whirlpoolPositionMint",
+          "isMut": true,
+          "isSigner": true
+        },
+        {
+          "name": "whirlpoolPositionTokenAccount",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "whirlpoolProgram",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "tokenProgram",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "systemProgram",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "rent",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "associatedTokenProgram",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": [
+        {
+          "name": "positionBump",
+          "type": "u8"
+        },
+        {
+          "name": "tickLowerIndex",
+          "type": "i32"
+        },
+        {
+          "name": "tickUpperIndex",
+          "type": "i32"
         }
       ]
     }
@@ -151,6 +224,34 @@ export type Surf = {
           {
             "name": "bump",
             "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "vaultPosition",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "bump",
+            "type": "u8"
+          },
+          {
+            "name": "whirlpoolPosition",
+            "type": "publicKey"
+          },
+          {
+            "name": "vaultUpperTickIndex",
+            "type": "i32"
+          },
+          {
+            "name": "vaultLowerTickIndex",
+            "type": "i32"
+          },
+          {
+            "name": "lastHedgeAdjustmentTickIndex",
+            "type": "i32"
           }
         ]
       }
@@ -232,24 +333,6 @@ export type Surf = {
       }
     }
   ],
-  "types": [
-    {
-      "name": "DriftAccountsBumps",
-      "type": {
-        "kind": "struct",
-        "fields": [
-          {
-            "name": "userStats",
-            "type": "u8"
-          },
-          {
-            "name": "user",
-            "type": "u8"
-          }
-        ]
-      }
-    }
-  ],
   "errors": [
     {
       "code": 6000,
@@ -284,7 +367,27 @@ export type Surf = {
     {
       "code": 6006,
       "name": "InvalidDriftAccountStatsAccount",
-      "msg": "could not deserialize drift_account_stats"
+      "msg": "Could not deserialize drift_account_stats"
+    },
+    {
+      "code": 6007,
+      "name": "InvalidTickIndexes",
+      "msg": "Lower tick index must be lower than upper tick index"
+    },
+    {
+      "code": 6008,
+      "name": "InvalidProvidedTickRange",
+      "msg": "Provided tick range does not correspond to vault preset"
+    },
+    {
+      "code": 6009,
+      "name": "CurrentTickIndexShiftedFromMidRange",
+      "msg": "Current tick index is shifted too many ticks from middle of full tick range"
+    },
+    {
+      "code": 6010,
+      "name": "TickIndexOverflow",
+      "msg": "Tick index is either lower than -443636 or higher than 443636"
     }
   ]
 };
@@ -405,12 +508,6 @@ export const IDL: Surf = {
       ],
       "args": [
         {
-          "name": "bumps",
-          "type": {
-            "defined": "DriftAccountsBumps"
-          }
-        },
-        {
           "name": "driftSubaccountId",
           "type": "u16"
         },
@@ -425,6 +522,85 @@ export const IDL: Surf = {
         {
           "name": "hedgeTickRange",
           "type": "u32"
+        }
+      ]
+    },
+    {
+      "name": "openWhirlpoolPosition",
+      "accounts": [
+        {
+          "name": "payer",
+          "isMut": true,
+          "isSigner": true
+        },
+        {
+          "name": "whirlpool",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "vault",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "vaultPosition",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "whirlpoolPosition",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "whirlpoolPositionMint",
+          "isMut": true,
+          "isSigner": true
+        },
+        {
+          "name": "whirlpoolPositionTokenAccount",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "whirlpoolProgram",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "tokenProgram",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "systemProgram",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "rent",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "associatedTokenProgram",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": [
+        {
+          "name": "positionBump",
+          "type": "u8"
+        },
+        {
+          "name": "tickLowerIndex",
+          "type": "i32"
+        },
+        {
+          "name": "tickUpperIndex",
+          "type": "i32"
         }
       ]
     }
@@ -442,6 +618,34 @@ export const IDL: Surf = {
           {
             "name": "bump",
             "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "vaultPosition",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "bump",
+            "type": "u8"
+          },
+          {
+            "name": "whirlpoolPosition",
+            "type": "publicKey"
+          },
+          {
+            "name": "vaultUpperTickIndex",
+            "type": "i32"
+          },
+          {
+            "name": "vaultLowerTickIndex",
+            "type": "i32"
+          },
+          {
+            "name": "lastHedgeAdjustmentTickIndex",
+            "type": "i32"
           }
         ]
       }
@@ -523,24 +727,6 @@ export const IDL: Surf = {
       }
     }
   ],
-  "types": [
-    {
-      "name": "DriftAccountsBumps",
-      "type": {
-        "kind": "struct",
-        "fields": [
-          {
-            "name": "userStats",
-            "type": "u8"
-          },
-          {
-            "name": "user",
-            "type": "u8"
-          }
-        ]
-      }
-    }
-  ],
   "errors": [
     {
       "code": 6000,
@@ -575,7 +761,27 @@ export const IDL: Surf = {
     {
       "code": 6006,
       "name": "InvalidDriftAccountStatsAccount",
-      "msg": "could not deserialize drift_account_stats"
+      "msg": "Could not deserialize drift_account_stats"
+    },
+    {
+      "code": 6007,
+      "name": "InvalidTickIndexes",
+      "msg": "Lower tick index must be lower than upper tick index"
+    },
+    {
+      "code": 6008,
+      "name": "InvalidProvidedTickRange",
+      "msg": "Provided tick range does not correspond to vault preset"
+    },
+    {
+      "code": 6009,
+      "name": "CurrentTickIndexShiftedFromMidRange",
+      "msg": "Current tick index is shifted too many ticks from middle of full tick range"
+    },
+    {
+      "code": 6010,
+      "name": "TickIndexOverflow",
+      "msg": "Tick index is either lower than -443636 or higher than 443636"
     }
   ]
 };

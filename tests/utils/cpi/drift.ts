@@ -6,6 +6,7 @@ import {
 	SPOT_MARKET_RATE_PRECISION,
 	SPOT_MARKET_WEIGHT_PRECISION,
 	StateAccount,
+	UserStatsAccount,
 } from '@drift-labs/sdk'
 import { PublicKey } from '@solana/web3.js'
 import { Program } from '@coral-xyz/anchor'
@@ -108,11 +109,31 @@ export const initDrift = async () => {
 	}
 }
 
-export const fetchUserStats = (program: Program<DriftIdl>, accountAddress: PublicKey) => {
-	try {
-		const data = program.account.UserStats.fetch(accountAddress)
-		return data
-	} catch {
-		return null
+export const getDriftPDAccounts = async (driftProgram: Program<DriftIdl>, adminConfigPDA: PublicKey) => {
+	const [userStatsPDA] = PublicKey.findProgramAddressSync(
+		[Buffer.from('user_stats', 'utf-8'), adminConfigPDA.toBuffer()],
+		DRIFT_PROGRAM_ID,
+	)
+
+	const userStatsAi = await connection.getAccountInfo(userStatsPDA)
+	let userSubaccountId = 0
+	if (userStatsAi?.data) {
+		const userStatsAccount = await driftProgram.coder.accounts.decode('UserStats', userStatsAi.data) as UserStatsAccount
+		userSubaccountId = userStatsAccount.numberOfSubAccounts
+	}
+
+	const [userSubaccountPDA] = PublicKey.findProgramAddressSync(
+		[
+			Buffer.from('user', 'utf-8'),
+			adminConfigPDA.toBuffer(),
+			new BN(userSubaccountId).toArrayLike(Buffer, 'le', 2),
+		],
+		DRIFT_PROGRAM_ID,
+	)
+
+	return {
+		userStatsPDA,
+		userSubaccountPDA,
+		userSubaccountId,
 	}
 }

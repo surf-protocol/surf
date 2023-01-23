@@ -1,4 +1,4 @@
-import { beforeAll, describe, expect, it } from 'vitest'
+import { describe, expect, it } from 'vitest'
 import { ORCA_WHIRLPOOL_PROGRAM_ID } from '@orca-so/whirlpools-sdk'
 import {
 	ASSOCIATED_TOKEN_PROGRAM_ID,
@@ -6,33 +6,17 @@ import {
 	TOKEN_PROGRAM_ID,
 } from '@solana/spl-token'
 import { ComputeBudgetProgram, PublicKey, SystemProgram, SYSVAR_RENT_PUBKEY } from '@solana/web3.js'
-import BN from 'bn.js'
 
 import { wallet, connection, provider, program } from './utils/load-config.js'
-import { initWhirlpool, DEFAULT_POOL_PRICE, getOpenPositionData } from './utils/cpi/whirlpool.js'
+import { initWhirlpool } from './utils/cpi/whirlpool.js'
 import { buildAndSendTx } from './utils/transaction.js'
-import { tokenAMint, tokenBMint, createUsdcMint } from './utils/mint.js'
-import { DRIFT_PROGRAM_ID, fetchUserStats, initDrift } from './utils/cpi/drift.js'
+import { tokenAMint, tokenBMint } from './utils/mint.js'
+import { DRIFT_PROGRAM_ID, getDriftPDAccounts, initDrift } from './utils/cpi/drift.js'
+import { initAdminIx } from './ix-utils.js'
 
 describe('initialize_vault', () => {
-	beforeAll(async () => {
-		await createUsdcMint(connection, wallet)
-	})
-
 	it('test', async () => {
-		// TODO: create helper
-		const [adminConfigPDA] = PublicKey.findProgramAddressSync(
-			[Buffer.from('admin_config', 'utf-8')],
-			program.programId,
-		)
-		const initAdminConfigIx = await program.methods
-			.initializeAdminConfig()
-			.accounts({
-				adminConfig: adminConfigPDA,
-				admin: wallet.publicKey,
-				systemProgram: SystemProgram.programId,
-			})
-			.instruction()
+		const { ix: initAdminConfigIx, adminConfigPDA } = await initAdminIx()
 		await buildAndSendTx(connection, [wallet], [initAdminConfigIx])
 
 		const { stateAccountAddress, driftProgram } = await initDrift()
@@ -48,25 +32,9 @@ describe('initialize_vault', () => {
 			getAssociatedTokenAddressSync(tokenBMint, vaultPDA, true),
 		]
 
-		// const upperPrice = DEFAULT_POOL_PRICE * 1.05
-		// const lowerPrice = DEFAULT_POOL_PRICE * 0.95
-		// const { positionATA, positionMintKeyPair, positionPDA, tickLowerIndex, tickUpperIndex } =
-		// 	getOpenPositionData(vaultPDA, upperPrice, lowerPrice)
-
-		const [userStatsPDA, userStatsBumps] = PublicKey.findProgramAddressSync(
-			[Buffer.from('user_stats', 'utf-8'), adminConfigPDA.toBuffer()],
-			DRIFT_PROGRAM_ID,
-		)
-		const userStatsAccount = await fetchUserStats(driftProgram, userStatsPDA)
-		const userSubAccountId = userStatsAccount?.numberOfUsers || 0
-
-		const [userPDA, userBump] = PublicKey.findProgramAddressSync(
-			[
-				Buffer.from('user', 'utf-8'),
-				adminConfigPDA.toBuffer(),
-				new BN(userSubAccountId).toArrayLike(Buffer, 'le', 2),
-			],
-			DRIFT_PROGRAM_ID,
+		const { userStatsPDA, userSubaccountPDA, userSubaccountId } = await getDriftPDAccounts(
+			driftProgram,
+			adminConfigPDA,
 		)
 
 		const fullTickRange = 800 // 8%
@@ -74,14 +42,8 @@ describe('initialize_vault', () => {
 		const hedgeTickRange = 20 // 0.2% - 10 times per one side of vault range
 
 		const ix = await program.methods
-			.initializeVault(
-				{ userStats: userStatsBumps, user: userBump },
-				userSubAccountId,
-				fullTickRange,
-				vaultTickRange,
-				hedgeTickRange,
-			)
-			.accounts({
+			.initializeVault(userSubaccountId, fullTickRange, vaultTickRange, hedgeTickRange)
+			.accountsStrict({
 				admin: wallet.publicKey,
 				adminConfig: adminConfigPDA,
 				vault: vaultPDA,
@@ -91,7 +53,7 @@ describe('initialize_vault', () => {
 				tokenVaultA: tokenAVault,
 				tokenVaultB: tokenBVault,
 				driftStats: userStatsPDA,
-				driftSubaccount: userPDA,
+				driftSubaccount: userSubaccountPDA,
 				driftState: stateAccountAddress,
 
 				whirlpoolProgram: ORCA_WHIRLPOOL_PROGRAM_ID,
@@ -107,7 +69,6 @@ describe('initialize_vault', () => {
 			connection,
 			[wallet],
 			[ComputeBudgetProgram.setComputeUnitLimit({ units: 1_400_000 }), ix],
-			true,
 		)
 
 		const vaultAccount = await program.account.vault.fetchNullable(vaultPDA)
@@ -123,7 +84,7 @@ describe('initialize_vault', () => {
 		expect(vaultAccount.tokenVaultB.equals(tokenBVault)).toBe(true)
 
 		expect(vaultAccount.driftStats.equals(userStatsPDA)).toBe(true)
-		expect(vaultAccount.driftSubaccount.equals(userPDA)).toBe(true)
+		expect(vaultAccount.driftSubaccount.equals(userSubaccountPDA)).toBe(true)
 
 		expect(vaultAccount.liquidity.toNumber()).toBe(0)
 		expect(vaultAccount.totalFeeGrowthA.toNumber()).toBe(0)

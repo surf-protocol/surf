@@ -16,5 +16,6 @@ module.exports = {
 		'@typescript-eslint/ban-ts-comment': 'warn',
 		'no-shadow': 'error',
 		'no-undef': 'error',
+		'no-use-before-define': 'error',
 	},
 }

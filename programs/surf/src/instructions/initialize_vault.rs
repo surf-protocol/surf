@@ -20,7 +20,6 @@ use crate::{
 // TODO: Add custom errors
 pub fn handler(
     ctx: Context<InitializeVault>,
-    _bumps: DriftAccountsBumps,
     drift_subaccount_id: u16,
     full_tick_range: u32,
     vault_tick_range: u32,
@@ -101,15 +100,9 @@ pub fn handler(
     Ok(())
 }
 
-#[derive(AnchorSerialize, AnchorDeserialize, Default)]
-pub struct DriftAccountsBumps {
-    user_stats: u8,
-    user: u8,
-}
-
 // TODO: Check if token mints correspond with vault token mints in subsequent ixs
 #[derive(Accounts)]
-#[instruction(bumps: DriftAccountsBumps, drift_subaccount_id: u16)]
+#[instruction(drift_subaccount_id: u16)]
 pub struct InitializeVault<'info> {
     #[account(mut)]
     pub admin: Signer<'info>,
@@ -159,7 +152,7 @@ pub struct InitializeVault<'info> {
             b"user_stats".as_ref(),
             admin_config.key().as_ref(),
         ],
-        bump = bumps.user_stats,
+        bump,
         seeds::program = drift_program.key(),
     )]
     pub drift_stats: UncheckedAccount<'info>,
@@ -171,7 +164,7 @@ pub struct InitializeVault<'info> {
             admin_config.key().as_ref(),
             drift_subaccount_id.to_le_bytes().as_ref()
         ],
-        bump = bumps.user,
+        bump,
         seeds::program = drift_program.key(),
     )]
     pub drift_subaccount: UncheckedAccount<'info>,

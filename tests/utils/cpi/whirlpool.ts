@@ -13,12 +13,17 @@ import { Keypair, Connection, PublicKey } from '@solana/web3.js'
 import Decimal from 'decimal.js'
 
 import { buildAndSendTx } from '../transaction.js'
-import { tokenAMint, tokenBMint } from '../mint.js'
+import { tokenADecimals, tokenAMint, tokenBDecimals, tokenBMint } from '../mint.js'
 
-export const DEFAULT_POOL_PRICE = 20
-export const DEFAULT_POOL_SQRT_PRICE = MathUtil.toX64(new Decimal(DEFAULT_POOL_PRICE))
 export const DEFAULT_FEE_RATE = 300
 export const DEFAULT_TICK_SPACING = 8
+export const DEFAULT_POOL_PRICE = 20
+export const DEFAULT_POOL_SQRT_PRICE = PriceMath.priceToSqrtPriceX64(
+	new Decimal(DEFAULT_POOL_PRICE),
+	tokenADecimals,
+	tokenBDecimals,
+)
+export const DEFAULT_TICK_INDEX = PriceMath.sqrtPriceX64ToTickIndex(DEFAULT_POOL_SQRT_PRICE)
 
 export const initWhirlpool = async (
 	connection: Connection,
@@ -84,8 +89,7 @@ export const initWhirlpool = async (
 		tokenVaultBKeypair,
 	})
 
-	const tickCurrentIndex = PriceMath.sqrtPriceX64ToTickIndex(DEFAULT_POOL_SQRT_PRICE)
-	const startTick = TickUtil.getStartTickIndex(tickCurrentIndex, DEFAULT_TICK_SPACING)
+	const startTick = TickUtil.getStartTickIndex(DEFAULT_TICK_INDEX, DEFAULT_TICK_SPACING)
 	const tickArrayPda = PDAUtil.getTickArray(
 		ORCA_WHIRLPOOL_PROGRAM_ID,
 		whirlpoolPDA.publicKey,
@@ -115,27 +119,21 @@ export const initWhirlpool = async (
 	}
 }
 
-const getPositionTickIndexes = (upperPrice: number, lowerPrice: number) => {
-	const tickUpperIndex = TickUtil.getInitializableTickIndex(
-		PriceMath.sqrtPriceX64ToTickIndex(MathUtil.toX64(new Decimal(upperPrice))),
-		DEFAULT_TICK_SPACING,
+export const getPositionAccountsAddresses = (vault: PublicKey) => {
+	const whirlpoolPositionMintKeyPair = new Keypair()
+	const whirlpoolPositionATA = getAssociatedTokenAddressSync(
+		whirlpoolPositionMintKeyPair.publicKey,
+		vault,
+		true,
 	)
-	const tickLowerIndex = TickUtil.getInitializableTickIndex(
-		PriceMath.sqrtPriceX64ToTickIndex(MathUtil.toX64(new Decimal(lowerPrice))),
-		DEFAULT_TICK_SPACING,
+	const whirlpoolPositionPDA = PDAUtil.getPosition(
+		ORCA_WHIRLPOOL_PROGRAM_ID,
+		whirlpoolPositionMintKeyPair.publicKey,
 	)
-	return { tickUpperIndex, tickLowerIndex }
-}
-
-export const getOpenPositionData = (vault: PublicKey, upperPrice: number, lowerPrice: number) => {
-	const positionMintKeyPair = new Keypair()
-	const positionATA = getAssociatedTokenAddressSync(positionMintKeyPair.publicKey, vault, true)
-	const positionPDA = PDAUtil.getPosition(ORCA_WHIRLPOOL_PROGRAM_ID, positionMintKeyPair.publicKey)
 
 	return {
-		...getPositionTickIndexes(upperPrice, lowerPrice),
-		positionMintKeyPair,
-		positionATA,
-		positionPDA,
+		whirlpoolPositionMintKeyPair,
+		whirlpoolPositionATA,
+		whirlpoolPositionPDA,
 	}
 }

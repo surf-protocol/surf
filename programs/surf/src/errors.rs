@@ -18,6 +18,16 @@ pub enum SurfError {
     #[msg("Hegde tick range should be lower than vault tick range")]
     HedgeTickRangeTooBig,
 
-    #[msg("could not deserialize drift_account_stats")]
+    #[msg("Could not deserialize drift_account_stats")]
     InvalidDriftAccountStatsAccount,
+
+    #[msg("Lower tick index must be lower than upper tick index")]
+    InvalidTickIndexes,
+    #[msg("Provided tick range does not correspond to vault preset")]
+    InvalidProvidedTickRange,
+    #[msg("Current tick index is shifted too many ticks from middle of full tick range")]
+    CurrentTickIndexShiftedFromMidRange,
+
+    #[msg("Tick index is either lower than -443636 or higher than 443636")]
+    TickIndexOverflow,
 }

@@ -19,7 +19,6 @@ pub mod surf {
 
     pub fn initialize_vault(
         ctx: Context<InitializeVault>,
-        bumps: DriftAccountsBumps,
         drift_subaccount_id: u16,
         full_tick_range: u32,
         vault_tick_range: u32,
@@ -27,11 +26,19 @@ pub mod surf {
     ) -> Result<()> {
         initialize_vault::handler(
             ctx,
-            bumps,
             drift_subaccount_id,
             full_tick_range,
             vault_tick_range,
             hedge_tick_range,
         )
+    }
+
+    pub fn open_whirlpool_position(
+        ctx: Context<OpenWhirlpoolPosition>,
+        position_bump: u8,
+        tick_lower_index: i32,
+        tick_upper_index: i32,
+    ) -> Result<()> {
+        open_whirlpool_position::handler(ctx, position_bump, tick_lower_index, tick_upper_index)
     }
 }
