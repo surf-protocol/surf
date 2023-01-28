@@ -1,10 +1,21 @@
 {
     "scripts": {
-        "format": "prettier */*.js \"*/**/*{.js,.ts}\" -w",
         "test": "vitest run --config vitest.config.ts",
         "test:w": "vitest --config vitest.config.ts --ui",
+        "test:new": "anchor deploy && npm run test",
+
+        "format": "prettier */*.js \"*/**/*{.js,.ts}\" -w",
+        "format:idl:w": "find sdk/ts/src/idl | entr -c prettier sdk/ts/src/idl/**/*.ts -w",
+
         "build:scripts": "tsc --project scripts/tsconfig.json",
-        "generate-idl-types": "node scripts/dist/generate-types/index.js"
+        "build:program:w": "chmod +x ./scripts/anchor-build.sh && find programs | entr -c ./scripts/anchor-build.sh",
+        
+        "generate-types": "node scripts/dist/generate-types/index.js",
+        "generate-types:w": "find target/idl | entr -c npm run generate-types",
+
+        "idl:w": "npm-run-all --parallel generate-types:w format:idl:w",
+
+        "validator": "chmod +x ./scripts/solana-test-validator.sh && ./scripts/solana-test-validator.sh"
     },
     "type": "module",
     "dependencies": {
