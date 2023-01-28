@@ -6,7 +6,7 @@ pub enum SurfError {
     #[msg("admin account key does not correspond with admin_config admin_key")]
     InvalidAdmin,
 
-    // Possibly change the amount of ticks later later
+    // Possibly change the amount of ticks later
     #[msg("Whirlpool position price range should be higher than 400 ticks")]
     FullTickRangeTooSmall,
     #[msg("Vault tick range should be higher than 200 ticks")]
@@ -30,4 +30,10 @@ pub enum SurfError {
 
     #[msg("Tick index is either lower than -443636 or higher than 443636")]
     TickIndexOverflow,
+
+    #[msg("Unable to down cast number")]
+    NumberDownCastError,
+
+    #[msg("Input quote amount is too high")]
+    BaseTokenOverflow,
 }

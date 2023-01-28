@@ -1,5 +1,5 @@
 import { Connection, Signer, TransactionInstruction } from '@solana/web3.js'
-import { buildAndSignTxFromInstructions, sendTransaction } from 'solana-tx-utils'
+import { buildAndSignTxFromInstructions, sendAndConfirmTransaction } from 'solana-tx-utils'
 
 export const buildAndSendTx = async (
 	connection: Connection,
@@ -15,7 +15,7 @@ export const buildAndSendTx = async (
 		},
 		connection,
 	)
-	const res = await sendTransaction(
+	const res = await sendAndConfirmTransaction(
 		{
 			...txData,
 			connection,

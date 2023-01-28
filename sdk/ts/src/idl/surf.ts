@@ -150,11 +150,6 @@ export type Surf = {
           "isSigner": false
         },
         {
-          "name": "vaultPosition",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
           "name": "whirlpoolPosition",
           "isMut": true,
           "isSigner": false
@@ -209,6 +204,187 @@ export type Surf = {
           "type": "i32"
         }
       ]
+    },
+    {
+      "name": "deposit",
+      "accounts": [
+        {
+          "name": "payer",
+          "isMut": true,
+          "isSigner": true
+        },
+        {
+          "name": "payerBaseTokenAccount",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "payerQuoteTokenAccount",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "adminConfig",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "prepareSwapWhirlpool",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "prepareSwapWhirlpoolBaseTokenVault",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "prepareSwapWhirlpoolQuoteTokenVault",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "prepareSwapTickArray0",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "prepareSwapTickArray1",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "prepareSwapTickArray2",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "prepareSwapOracle",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "vault",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "vaultBaseTokenAccount",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "vaultQuoteTokenAccount",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "whirlpoolPosition",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "whirlpoolPositionTokenAccount",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "whirlpoolPositionTickArrayLower",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "whirlpoolPositionTickArrayUpper",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "whirlpool",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "whirlpoolBaseTokenVault",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "whirlpoolQuoteTokenVault",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "driftState",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "driftSigner",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "driftQuoteSpotMarketVault",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "driftBaseSpotMarketVault",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "driftBaseTokenOracle",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "driftBaseSpotMarket",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "driftQuoteSpotMarket",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "driftStats",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "driftSubaccount",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "whirlpoolProgram",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "driftProgram",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "tokenProgram",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "systemProgram",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": [
+        {
+          "name": "inputQuoteAmount",
+          "type": "u64"
+        }
+      ]
     }
   ],
   "accounts": [
@@ -229,7 +405,7 @@ export type Surf = {
       }
     },
     {
-      "name": "vaultPosition",
+      "name": "userPosition",
       "type": {
         "kind": "struct",
         "fields": [
@@ -238,20 +414,28 @@ export type Surf = {
             "type": "u8"
           },
           {
-            "name": "whirlpoolPosition",
+            "name": "vault",
             "type": "publicKey"
           },
           {
-            "name": "vaultUpperTickIndex",
-            "type": "i32"
+            "name": "liquidity",
+            "type": "u128"
           },
           {
-            "name": "vaultLowerTickIndex",
-            "type": "i32"
+            "name": "feeGrowthCheckpointBaseToken",
+            "type": "u128"
           },
           {
-            "name": "lastHedgeAdjustmentTickIndex",
-            "type": "i32"
+            "name": "feeGrowthCheckpointQuoteToken",
+            "type": "u128"
+          },
+          {
+            "name": "feeUnclaimedBaseToken",
+            "type": "u64"
+          },
+          {
+            "name": "feeUnclaimedQuoteToken",
+            "type": "u64"
           }
         ]
       }
@@ -270,23 +454,19 @@ export type Surf = {
             "type": "publicKey"
           },
           {
-            "name": "vaultPosition",
+            "name": "baseTokenMint",
             "type": "publicKey"
           },
           {
-            "name": "tokenMintA",
+            "name": "baseTokenVault",
             "type": "publicKey"
           },
           {
-            "name": "tokenVaultA",
+            "name": "quoteTokenMint",
             "type": "publicKey"
           },
           {
-            "name": "tokenMintB",
-            "type": "publicKey"
-          },
-          {
-            "name": "tokenVaultB",
+            "name": "quoteTokenVault",
             "type": "publicKey"
           },
           {
@@ -302,19 +482,19 @@ export type Surf = {
             "type": "u128"
           },
           {
-            "name": "totalFeeGrowthA",
+            "name": "baseTokenTotalFeeGrowth",
             "type": "u128"
           },
           {
-            "name": "totalFeeGrowthB",
+            "name": "quoteTokenTotalFeeGrowth",
             "type": "u128"
           },
           {
-            "name": "feeUnclaimedA",
+            "name": "baseTokenFeeUnclaimed",
             "type": "u128"
           },
           {
-            "name": "feeUnclaimedB",
+            "name": "quoteTokenFeeUnclaimed",
             "type": "u128"
           },
           {
@@ -328,6 +508,26 @@ export type Surf = {
           {
             "name": "hedgeTickRange",
             "type": "u32"
+          },
+          {
+            "name": "isActive",
+            "type": "bool"
+          },
+          {
+            "name": "whirlpoolPosition",
+            "type": "publicKey"
+          },
+          {
+            "name": "vaultUpperTickIndex",
+            "type": "i32"
+          },
+          {
+            "name": "vaultLowerTickIndex",
+            "type": "i32"
+          },
+          {
+            "name": "lastHedgeAdjustmentTickIndex",
+            "type": "i32"
           }
         ]
       }
@@ -388,6 +588,16 @@ export type Surf = {
       "code": 6010,
       "name": "TickIndexOverflow",
       "msg": "Tick index is either lower than -443636 or higher than 443636"
+    },
+    {
+      "code": 6011,
+      "name": "NumberDownCastError",
+      "msg": "Unable to down cast number"
+    },
+    {
+      "code": 6012,
+      "name": "BaseTokenOverflow",
+      "msg": "Input quote amount is too high"
     }
   ]
 };
@@ -544,11 +754,6 @@ export const IDL: Surf = {
           "isSigner": false
         },
         {
-          "name": "vaultPosition",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
           "name": "whirlpoolPosition",
           "isMut": true,
           "isSigner": false
@@ -603,6 +808,187 @@ export const IDL: Surf = {
           "type": "i32"
         }
       ]
+    },
+    {
+      "name": "deposit",
+      "accounts": [
+        {
+          "name": "payer",
+          "isMut": true,
+          "isSigner": true
+        },
+        {
+          "name": "payerBaseTokenAccount",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "payerQuoteTokenAccount",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "adminConfig",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "prepareSwapWhirlpool",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "prepareSwapWhirlpoolBaseTokenVault",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "prepareSwapWhirlpoolQuoteTokenVault",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "prepareSwapTickArray0",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "prepareSwapTickArray1",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "prepareSwapTickArray2",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "prepareSwapOracle",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "vault",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "vaultBaseTokenAccount",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "vaultQuoteTokenAccount",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "whirlpoolPosition",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "whirlpoolPositionTokenAccount",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "whirlpoolPositionTickArrayLower",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "whirlpoolPositionTickArrayUpper",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "whirlpool",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "whirlpoolBaseTokenVault",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "whirlpoolQuoteTokenVault",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "driftState",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "driftSigner",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "driftQuoteSpotMarketVault",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "driftBaseSpotMarketVault",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "driftBaseTokenOracle",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "driftBaseSpotMarket",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "driftQuoteSpotMarket",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "driftStats",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "driftSubaccount",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "whirlpoolProgram",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "driftProgram",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "tokenProgram",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "systemProgram",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": [
+        {
+          "name": "inputQuoteAmount",
+          "type": "u64"
+        }
+      ]
     }
   ],
   "accounts": [
@@ -623,7 +1009,7 @@ export const IDL: Surf = {
       }
     },
     {
-      "name": "vaultPosition",
+      "name": "userPosition",
       "type": {
         "kind": "struct",
         "fields": [
@@ -632,20 +1018,28 @@ export const IDL: Surf = {
             "type": "u8"
           },
           {
-            "name": "whirlpoolPosition",
+            "name": "vault",
             "type": "publicKey"
           },
           {
-            "name": "vaultUpperTickIndex",
-            "type": "i32"
+            "name": "liquidity",
+            "type": "u128"
           },
           {
-            "name": "vaultLowerTickIndex",
-            "type": "i32"
+            "name": "feeGrowthCheckpointBaseToken",
+            "type": "u128"
           },
           {
-            "name": "lastHedgeAdjustmentTickIndex",
-            "type": "i32"
+            "name": "feeGrowthCheckpointQuoteToken",
+            "type": "u128"
+          },
+          {
+            "name": "feeUnclaimedBaseToken",
+            "type": "u64"
+          },
+          {
+            "name": "feeUnclaimedQuoteToken",
+            "type": "u64"
           }
         ]
       }
@@ -664,23 +1058,19 @@ export const IDL: Surf = {
             "type": "publicKey"
           },
           {
-            "name": "vaultPosition",
+            "name": "baseTokenMint",
             "type": "publicKey"
           },
           {
-            "name": "tokenMintA",
+            "name": "baseTokenVault",
             "type": "publicKey"
           },
           {
-            "name": "tokenVaultA",
+            "name": "quoteTokenMint",
             "type": "publicKey"
           },
           {
-            "name": "tokenMintB",
-            "type": "publicKey"
-          },
-          {
-            "name": "tokenVaultB",
+            "name": "quoteTokenVault",
             "type": "publicKey"
           },
           {
@@ -696,19 +1086,19 @@ export const IDL: Surf = {
             "type": "u128"
           },
           {
-            "name": "totalFeeGrowthA",
+            "name": "baseTokenTotalFeeGrowth",
             "type": "u128"
           },
           {
-            "name": "totalFeeGrowthB",
+            "name": "quoteTokenTotalFeeGrowth",
             "type": "u128"
           },
           {
-            "name": "feeUnclaimedA",
+            "name": "baseTokenFeeUnclaimed",
             "type": "u128"
           },
           {
-            "name": "feeUnclaimedB",
+            "name": "quoteTokenFeeUnclaimed",
             "type": "u128"
           },
           {
@@ -722,6 +1112,26 @@ export const IDL: Surf = {
           {
             "name": "hedgeTickRange",
             "type": "u32"
+          },
+          {
+            "name": "isActive",
+            "type": "bool"
+          },
+          {
+            "name": "whirlpoolPosition",
+            "type": "publicKey"
+          },
+          {
+            "name": "vaultUpperTickIndex",
+            "type": "i32"
+          },
+          {
+            "name": "vaultLowerTickIndex",
+            "type": "i32"
+          },
+          {
+            "name": "lastHedgeAdjustmentTickIndex",
+            "type": "i32"
           }
         ]
       }
@@ -782,6 +1192,16 @@ export const IDL: Surf = {
       "code": 6010,
       "name": "TickIndexOverflow",
       "msg": "Tick index is either lower than -443636 or higher than 443636"
+    },
+    {
+      "code": 6011,
+      "name": "NumberDownCastError",
+      "msg": "Unable to down cast number"
+    },
+    {
+      "code": 6012,
+      "name": "BaseTokenOverflow",
+      "msg": "Input quote amount is too high"
     }
   ]
 };

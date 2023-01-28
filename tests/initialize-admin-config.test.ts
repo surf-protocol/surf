@@ -1,7 +1,7 @@
 import { PublicKey, SystemProgram } from '@solana/web3.js'
 import { describe, expect, it } from 'vitest'
-import { initAdminIx } from './ix-utils.js'
 
+import { initAdminIx } from './ix-utils.js'
 import { wallet, program, connection } from './utils/load-config.js'
 import { buildAndSendTx } from './utils/transaction.js'
 

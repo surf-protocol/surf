@@ -5,7 +5,7 @@ use anchor_spl::{
 };
 use drift::{
     cpi as drift_cpi,
-    cpi::accounts::{InitializeUser, InitializeUserStats},
+    cpi::accounts::{InitializeUser, InitializeUserStats, UpdateUser},
     program::Drift as DriftProgram,
     state::{state::State, user::UserStats},
 };
@@ -18,6 +18,7 @@ use crate::{
 };
 
 // TODO: Add custom errors
+// TODO: Limit to only USDC markets
 pub fn handler(
     ctx: Context<InitializeVault>,
     drift_subaccount_id: u16,
@@ -83,6 +84,19 @@ pub fn handler(
     )?;
 
     let vault_bump = ctx.bumps.get("vault").unwrap();
+
+    // Update delegate
+    let update_subaccount_delegate_context =
+        ctx.accounts.get_update_drift_subaccount_delegate_context();
+    drift_cpi::update_user_delegate(
+        update_subaccount_delegate_context.with_signer(&[&[
+            AdminConfig::NAMESPACE.as_ref(),
+            &[ctx.accounts.admin_config.bump],
+        ]]),
+        drift_subaccount_id,
+        ctx.accounts.vault.key(),
+    )?;
+
     ctx.accounts.vault.initialize(
         *vault_bump,
         ctx.accounts.whirlpool.key(),
@@ -146,6 +160,7 @@ pub struct InitializeVault<'info> {
     )]
     pub token_vault_b: Box<Account<'info, TokenAccount>>,
 
+    // TODO: Initialize drift accounts with vault as authority
     /// CHECK: Drift program validates the account in the CPI
     #[account(mut,
         seeds = [
@@ -233,5 +248,15 @@ impl<'info> InitializeVault<'info> {
             ),
             drift_subaccount_name,
         )
+    }
+
+    pub fn get_update_drift_subaccount_delegate_context(
+        &self,
+    ) -> CpiContext<'_, '_, '_, 'info, UpdateUser<'info>> {
+        let accounts = UpdateUser {
+            authority: self.admin_config.to_account_info(),
+            user: self.drift_subaccount.to_account_info(),
+        };
+        CpiContext::new(self.drift_program.to_account_info(), accounts)
     }
 }

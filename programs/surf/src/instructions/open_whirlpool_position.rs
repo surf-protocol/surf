@@ -9,13 +9,14 @@ use whirlpools::{
 
 use crate::{
     errors::SurfError,
-    state::{Vault, VaultPosition},
-    utils::tick_math::{get_initializable_tick_index, MAX_TICK_INDEX, MIN_TICK_INDEX},
+    state::Vault,
+    utils::orca::tick_math::{get_initializable_tick_index, MAX_TICK_INDEX, MIN_TICK_INDEX},
 };
 
 pub fn handler(
     ctx: Context<OpenWhirlpoolPosition>,
     position_bump: u8,
+    // TODO: Remove tick indexes, calculate from ranges in vault
     // Tick indexes without accounting for tick spacing
     tick_lower_index: i32,
     tick_upper_index: i32,
@@ -59,13 +60,9 @@ pub fn handler(
         tick_upper_initializable,
     )?;
 
-    let vault_position_bump = ctx.bumps.get("vault_position").unwrap();
-    ctx.accounts.vault_position.initialize(
-        *vault_position_bump,
-        ctx.accounts.whirlpool_position.key(),
-        ctx.accounts.vault.vault_tick_range,
-        current_tick_index,
-    );
+    ctx.accounts
+        .vault
+        .open_position(current_tick_index, ctx.accounts.whirlpool_position.key());
 
     Ok(())
 }
@@ -86,17 +83,6 @@ pub struct OpenWhirlpoolPosition<'info> {
         bump = vault.bump
     )]
     pub vault: Box<Account<'info, Vault>>,
-
-    #[account(init,
-        seeds = [
-            VaultPosition::NAMESPACE.as_ref(),
-            vault.key().as_ref(),
-        ],
-        bump,
-        payer = payer,
-        space = VaultPosition::LEN
-    )]
-    pub vault_position: Account<'info, VaultPosition>,
 
     /// CHECK: Whirlpool program handles checks
     #[account(mut,

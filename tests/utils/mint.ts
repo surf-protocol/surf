@@ -1,13 +1,19 @@
+import { getAssociatedTokenAddressSync } from '@solana/spl-token'
 import { NATIVE_MINT, TOKEN_PROGRAM_ID, createInitializeMintInstruction } from '@solana/spl-token'
-import { Keypair, PublicKey, LAMPORTS_PER_SOL, SystemProgram } from '@solana/web3.js'
-import { connection, wallet } from './load-config.js'
+import { Keypair, PublicKey, SystemProgram } from '@solana/web3.js'
 
+import { connection, wallet } from './load-config.js'
 import { buildAndSendTx } from './transaction.js'
 
-export const usdcMintKeyPair = new Keypair()
+export const quoteMintKeyPair = new Keypair()
+export const quoteTokenATA = getAssociatedTokenAddressSync(
+	quoteMintKeyPair.publicKey,
+	wallet.publicKey,
+)
+export const baseTokenATA = getAssociatedTokenAddressSync(NATIVE_MINT, wallet.publicKey)
 
 const getSortedMints = (): [PublicKey, number][] => {
-	const usdcMint = usdcMintKeyPair.publicKey
+	const usdcMint = quoteMintKeyPair.publicKey
 	const usdcDecimals = 6
 
 	if (Buffer.compare(NATIVE_MINT.toBuffer(), usdcMint.toBuffer()) < 0) {
@@ -22,29 +28,29 @@ const getSortedMints = (): [PublicKey, number][] => {
 	]
 }
 
-const [[tokenAMint, tokenADecimals], [tokenBMint, tokenBDecimals]] = getSortedMints()
-export { tokenAMint, tokenADecimals, tokenBMint, tokenBDecimals }
+const [[baseTokenMint, baseTokenDecimals], [quoteTokenMint, quoteTokenDecimals]] = getSortedMints()
+export { baseTokenMint, baseTokenDecimals, quoteTokenMint, quoteTokenDecimals }
 
-console.log(`Token A mint: ${tokenAMint.toString()}\nToken B mint: ${tokenBMint.toString()}`)
+console.log(`Token A mint: ${baseTokenMint.toString()}\nToken B mint: ${quoteTokenMint.toString()}`)
 
 const createUsdcMint = async () => {
 	const ixs = [
 		SystemProgram.createAccount({
 			fromPubkey: wallet.publicKey,
-			newAccountPubkey: usdcMintKeyPair.publicKey,
+			newAccountPubkey: quoteMintKeyPair.publicKey,
 			space: 82,
 			lamports: await connection.getMinimumBalanceForRentExemption(82),
 			programId: TOKEN_PROGRAM_ID,
 		}),
 		createInitializeMintInstruction(
-			usdcMintKeyPair.publicKey,
-			tokenBDecimals,
+			quoteMintKeyPair.publicKey,
+			quoteTokenDecimals,
 			wallet.publicKey,
 			PublicKey.default,
 			TOKEN_PROGRAM_ID,
 		),
 	]
-	await buildAndSendTx(connection, [wallet, usdcMintKeyPair], ixs)
+	await buildAndSendTx(connection, [wallet, quoteMintKeyPair], ixs)
 }
 
 await createUsdcMint()

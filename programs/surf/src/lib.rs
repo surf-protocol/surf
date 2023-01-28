@@ -1,6 +1,6 @@
 use anchor_lang::prelude::*;
 
-declare_id!("FjWGJ4ecVHR9R39kaGZJcRs4rcBcjDzckvjA7WSBmLsE");
+declare_id!("4wVrbfSHxmhevzPzNfdpmVkJ2jqNRy6RYt4TxcHsnfSo");
 
 pub mod errors;
 pub mod instructions;
@@ -40,5 +40,9 @@ pub mod surf {
         tick_upper_index: i32,
     ) -> Result<()> {
         open_whirlpool_position::handler(ctx, position_bump, tick_lower_index, tick_upper_index)
+    }
+
+    pub fn deposit(ctx: Context<Deposit>, input_quote_amount: u64) -> Result<()> {
+        deposit::handler(ctx, input_quote_amount)
     }
 }

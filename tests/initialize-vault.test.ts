@@ -5,13 +5,20 @@ import {
 	getAssociatedTokenAddressSync,
 	TOKEN_PROGRAM_ID,
 } from '@solana/spl-token'
+import { UserAccount, UserStatsAccount } from '@drift-labs/sdk'
 import { ComputeBudgetProgram, PublicKey, SystemProgram, SYSVAR_RENT_PUBKEY } from '@solana/web3.js'
 
-import { wallet, connection, provider, program } from './utils/load-config.js'
+import { wallet, connection, program } from './utils/load-config.js'
 import { initWhirlpool } from './utils/cpi/whirlpool.js'
 import { buildAndSendTx } from './utils/transaction.js'
-import { tokenAMint, tokenBMint } from './utils/mint.js'
-import { DRIFT_PROGRAM_ID, getDriftPDAccounts, initDrift } from './utils/cpi/drift.js'
+import { baseTokenMint, quoteTokenMint } from './utils/mint.js'
+import {
+	DRIFT_PROGRAM_ID,
+	getDriftPDAccounts,
+	initDrift,
+	driftStateKey,
+	driftProgram,
+} from './utils/cpi/drift.js'
 import { initAdminIx } from './ix-utils.js'
 
 describe('initialize_vault', () => {
@@ -19,21 +26,20 @@ describe('initialize_vault', () => {
 		const { ix: initAdminConfigIx, adminConfigPDA } = await initAdminIx()
 		await buildAndSendTx(connection, [wallet], [initAdminConfigIx])
 
-		const { stateAccountAddress, driftProgram } = await initDrift()
-		const { whirlpool } = await initWhirlpool(connection, wallet, provider)
+		await initDrift()
+		const { whirlpoolKey } = await initWhirlpool()
 
 		const [vaultPDA, vaultBump] = PublicKey.findProgramAddressSync(
-			[Buffer.from('vault', 'utf-8'), whirlpool.toBuffer()],
+			[Buffer.from('vault', 'utf-8'), whirlpoolKey.toBuffer()],
 			program.programId,
 		)
 
 		const [tokenAVault, tokenBVault] = [
-			getAssociatedTokenAddressSync(tokenAMint, vaultPDA, true),
-			getAssociatedTokenAddressSync(tokenBMint, vaultPDA, true),
+			getAssociatedTokenAddressSync(baseTokenMint, vaultPDA, true),
+			getAssociatedTokenAddressSync(quoteTokenMint, vaultPDA, true),
 		]
 
 		const { userStatsPDA, userSubaccountPDA, userSubaccountId } = await getDriftPDAccounts(
-			driftProgram,
 			adminConfigPDA,
 		)
 
@@ -47,14 +53,14 @@ describe('initialize_vault', () => {
 				admin: wallet.publicKey,
 				adminConfig: adminConfigPDA,
 				vault: vaultPDA,
-				whirlpool: whirlpool,
-				tokenMintA: tokenAMint,
-				tokenMintB: tokenBMint,
+				whirlpool: whirlpoolKey,
+				tokenMintA: baseTokenMint,
+				tokenMintB: quoteTokenMint,
 				tokenVaultA: tokenAVault,
 				tokenVaultB: tokenBVault,
 				driftStats: userStatsPDA,
 				driftSubaccount: userSubaccountPDA,
-				driftState: stateAccountAddress,
+				driftState: driftStateKey,
 
 				whirlpoolProgram: ORCA_WHIRLPOOL_PROGRAM_ID,
 				driftProgram: DRIFT_PROGRAM_ID,
@@ -75,25 +81,43 @@ describe('initialize_vault', () => {
 
 		expect(vaultAccount.bump).toBe(vaultBump)
 
-		expect(vaultAccount.whirlpool.equals(whirlpool)).toBe(true)
-		expect(vaultAccount.vaultPosition.equals(PublicKey.default)).toBe(true)
+		expect(vaultAccount.whirlpool.equals(whirlpoolKey)).toBe(true)
 
-		expect(vaultAccount.tokenMintA.equals(tokenAMint)).toBe(true)
-		expect(vaultAccount.tokenMintB.equals(tokenBMint)).toBe(true)
-		expect(vaultAccount.tokenVaultA.equals(tokenAVault)).toBe(true)
-		expect(vaultAccount.tokenVaultB.equals(tokenBVault)).toBe(true)
+		expect(vaultAccount.baseTokenMint.equals(baseTokenMint)).toBe(true)
+		expect(vaultAccount.quoteTokenMint.equals(quoteTokenMint)).toBe(true)
+		expect(vaultAccount.baseTokenVault.equals(tokenAVault)).toBe(true)
+		expect(vaultAccount.quoteTokenVault.equals(tokenBVault)).toBe(true)
 
 		expect(vaultAccount.driftStats.equals(userStatsPDA)).toBe(true)
 		expect(vaultAccount.driftSubaccount.equals(userSubaccountPDA)).toBe(true)
 
 		expect(vaultAccount.liquidity.toNumber()).toBe(0)
-		expect(vaultAccount.totalFeeGrowthA.toNumber()).toBe(0)
-		expect(vaultAccount.totalFeeGrowthB.toNumber()).toBe(0)
-		expect(vaultAccount.feeUnclaimedA.toNumber()).toBe(0)
-		expect(vaultAccount.feeUnclaimedB.toNumber()).toBe(0)
+		expect(vaultAccount.baseTokenTotalFeeGrowth.toNumber()).toBe(0)
+		expect(vaultAccount.quoteTokenTotalFeeGrowth.toNumber()).toBe(0)
+		expect(vaultAccount.baseTokenFeeUnclaimed.toNumber()).toBe(0)
+		expect(vaultAccount.quoteTokenFeeUnclaimed.toNumber()).toBe(0)
 
 		expect(vaultAccount.fullTickRange).toBe(fullTickRange)
 		expect(vaultAccount.vaultTickRange).toBe(vaultTickRange)
 		expect(vaultAccount.hedgeTickRange).toBe(hedgeTickRange)
+
+		expect(vaultAccount.isActive).toBe(false)
+		expect(vaultAccount.whirlpoolPosition.equals(PublicKey.default)).toBe(true)
+		expect(vaultAccount.vaultUpperTickIndex).toBe(0)
+		expect(vaultAccount.vaultLowerTickIndex).toBe(0)
+		expect(vaultAccount.lastHedgeAdjustmentTickIndex).toBe(0)
+
+		// @ts-ignore
+		const [driftSubaccount, driftStats] = await Promise.all([
+			driftProgram.account['user'].fetch(userSubaccountPDA, 'confirmed') as Promise<UserAccount>,
+			driftProgram.account['userStats'].fetch(
+				userStatsPDA,
+				'confirmed',
+			) as Promise<UserStatsAccount>,
+		])
+
+		expect(driftStats.authority.equals(adminConfigPDA)).toBe(true)
+		expect(driftSubaccount.authority.equals(driftStats.authority)).toBe(true)
+		expect(driftSubaccount.delegate.equals(vaultPDA)).toBe(true)
 	})
 })

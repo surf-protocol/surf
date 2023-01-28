@@ -47,4 +47,13 @@ declare module '@solana/spl-token' {
 		freezeAuthority: null | PublicKey,
 		programId?: PublicKey,
 	): TransactionInstruction
+
+	export function createMintToInstruction(
+		mint: PublicKey,
+		destination: PublicKey,
+		authority: PublicKey,
+		amount: number | bigint,
+		multiSigners?: Signer[],
+		programId?: PublicKey,
+	): TransactionInstruction
 }
