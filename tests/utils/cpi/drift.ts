@@ -25,7 +25,6 @@ export const DRIFT_PROGRAM_ID = new PublicKey('dRiftyHA39MWEi3m9aunc5MzRF1JYuBsb
 const baseTokenOracleMint = new Keypair()
 export const driftOracle = baseTokenOracleMint.publicKey
 
-
 const adminClient = new TestClient({
 	connection,
 	wallet: provider.wallet,

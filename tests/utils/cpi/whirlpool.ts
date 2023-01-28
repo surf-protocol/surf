@@ -48,11 +48,7 @@ export const whirlpoolProgram = WhirlpoolContext.withProvider(
 ).program
 
 export const buildInitTickArrayIx = (startTickIndex: number, whirlpoolKey: PublicKey) => {
-	const tickArrayPda = PDAUtil.getTickArray(
-		ORCA_WHIRLPOOL_PROGRAM_ID,
-		whirlpoolKey,
-		startTickIndex,
-	)
+	const tickArrayPda = PDAUtil.getTickArray(ORCA_WHIRLPOOL_PROGRAM_ID, whirlpoolKey, startTickIndex)
 	const ix = WhirlpoolIx.initTickArrayIx(whirlpoolProgram, {
 		tickArrayPda,
 		startTick: startTickIndex,

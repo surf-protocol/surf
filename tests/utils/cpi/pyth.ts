@@ -13,7 +13,7 @@ export const createPriceFeed = async ({
 	confidence = undefined,
 	expo = -4,
 }: {
-	keypair: Keypair,
+	keypair: Keypair
 	initPrice: number
 	confidence?: number
 	expo?: number

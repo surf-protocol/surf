@@ -116,7 +116,8 @@ export const openWhirlpoolPositionIx = async ({
 			associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
 			rent: SYSVAR_RENT_PUBKEY,
 			systemProgram: SystemProgram.programId,
-		}).instruction()
+		})
+		.instruction()
 	return { ix }
 }
 
