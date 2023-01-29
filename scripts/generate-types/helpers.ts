@@ -5,31 +5,31 @@ export const buildSeparator = (name: string) => `// ----------\n// ${name}\n// -
 export const indent = (content: string, count: number, nl?: boolean) =>
 	`${'\t'.repeat(count)}${content}${nl ? '\n' : ''}`
 
-export const transformNumberToTs = (type: IdlNumberType, target: Generated) => {
+export const transformNumberToTs = (type: IdlNumberType, generated: Generated) => {
 	const numType = type[0]
 	// eslint-disable-next-line @typescript-eslint/no-unused-vars
 	const [_, bits] = type.split(numType)
 	if (Number(bits) > 32) {
-		target.importsExternal['BN'] = "import BN from 'bn.js'"
+		generated.importsExternal['default bn.js'].push('BN')
 		return 'BN'
 	}
 	return 'number'
 }
 
-export const transformPrimitiveToTs = (type: IdlPredefinedTypes, target: Generated) => {
+export const transformPrimitiveToTs = (type: IdlPredefinedTypes, generated: Generated) => {
 	switch (type) {
 		case 'bool':
 			return 'boolean'
 		case 'bytes':
 			return 'Uint8Array'
 		case 'publicKey': {
-			target.importsExternal['@solana/web3.js'] = "import { PublicKey } from '@solana/web3.js'"
+			generated.importsExternal['@solana/web3.js'].push('PublicKey')
 			return 'PublicKey'
 		}
 		case 'string':
 			return 'string'
 		default:
-			return transformNumberToTs(type, target)
+			return transformNumberToTs(type, generated)
 	}
 }
 
@@ -54,51 +54,68 @@ export const getType = (target: Generated, fieldType?: IdlType): string => {
 	return ''
 }
 
-export const buildTypescriptType = (name: string, fields: IdlField[], target: Generated) => {
+export const buildTypescriptType = (name: string, fields: IdlField[], generated: Generated) => {
 	const typeDef = `export type ${name} = `
 	const propsArr = fields.map(
-		(fieldType) => `${fieldType.name}: ${getType(target, fieldType.type)}`,
+		(fieldType) => `${fieldType.name}: ${getType(generated, fieldType.type)}`,
 	)
 	const propsStr = propsArr.join('\n\t')
 	return `${typeDef}{\n\t${propsStr}\n}\n`
 }
 
-export const composeFile = (target: Generated, forTypes?: boolean) => {
-	const importsExternal = Object.values(target.importsExternal)
-	const importsInternal = Object.entries(target.importsInternal)
-		.map(([path, imports]) =>
-			imports.length
-				? `import {\n${imports.map((i) => indent(`${i},`, 1, true)).join()}} from '${path}'`
-				: null,
-		)
-		.filter(Boolean)
-
-	return (
-		(forTypes ? '/* eslint-disable no-use-before-define */\n' : '') +
-		[
-			importsExternal.length ? `${importsExternal.join('\n')}\n` : null,
-			!forTypes && importsInternal.length ? `${importsInternal.join('\n')}\n` : null,
-			target.output.join('\n'),
-		]
-			.filter(Boolean)
-			.join('\n')
-	)
-}
-
 export const buildAccountParser = (capitalizedName: string, typeName: string) => {
 	const parserName = `parse${typeName}`
-	const name = capitalizedName[0].toLowerCase() + capitalizedName.slice(1)
 	return (
 		`export const ${parserName} = (program: Program<SurfIDL>, data: Buffer | null) => {\n` +
 		indent('if (!data) {', 1, true) +
 		indent('return null', 2, true) +
 		indent('}', 1, true) +
 		indent('try {', 1, true) +
-		indent(`return program.coder.accounts.decode('${name}', data) as ${typeName}`, 2, true) +
+		indent(
+			`return program.coder.accounts.decode('${capitalizedName}', data) as ${typeName}`,
+			2,
+			true,
+		) +
 		indent('} catch {', 1, true) +
-		indent(`console.error('Account ${name} could not be parsed')`, 2, true) +
+		indent(`console.error('Account ${capitalizedName} could not be parsed')`, 2, true) +
 		indent('return null', 2, true) +
 		indent('}', 1, true) +
 		'}\n'
 	)
+}
+
+export const composeFile = (generated: Generated, forTypes?: boolean) => {
+	const composeImports = (imports: Record<string, string[]>) => {
+		const importsArr = Object.entries(imports)
+		if (importsArr.every(([_, i]) => !i.length)) {
+			return ''
+		}
+		return (
+			importsArr
+				.map(([path, _imports]) => {
+					const [isDefault, realPath] = path.split(' ')
+					if (isDefault.length && realPath) {
+						return `import ${_imports[0]} from '${realPath}'`
+					}
+
+					const importsUnique = [...new Set(_imports)]
+					return importsUnique.length
+						? `import { ${importsUnique.join(', ')} } from '${path}'`
+						: null
+				})
+				.filter(Boolean)
+				.join('\n') + '\n\n'
+		)
+	}
+
+	const importsExternal = composeImports(generated.importsExternal)
+	const importsInternal = composeImports(generated.importsInternal)
+
+	let output = ''
+	output += forTypes ? '/* eslint-disable no-use-before-define */\n' : ''
+	output += importsExternal
+	output += !forTypes ? importsInternal : ''
+	output += generated.output.join('\n')
+
+	return output
 }

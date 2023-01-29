@@ -42,5 +42,4 @@ export type IdlField = { name: string; type?: IdlType }
 
 export type Generated = {
 	output: string[]
-	importsInternal: Record<string, string[]>
-} & Record<'importsExternal', Record<string, string>>
+} & Record<'importsExternal' | 'importsInternal', Record<string, string[]>>
