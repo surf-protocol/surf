@@ -8,9 +8,13 @@ import {
 	buildSeparator,
 	buildTypescriptType,
 	composeFile,
-	getType,
-	indent,
 } from './helpers.js'
+import {
+	composeAccountsType,
+	composeParamsType,
+	composeInstructionFunction,
+	composeArgs,
+} from './instructions.js'
 import { Generated } from './types.js'
 
 const IDL_FILE_NAME = 'surf'
@@ -30,14 +34,17 @@ const IDLFile = fs.readFileSync(SRC_IDL_JSON_PATH, { encoding: 'utf-8' })
 const IDLParsed = JSON.parse(IDLFile) as Idl
 
 const generatedTypes: Generated = {
-	importsExternal: {},
+	importsExternal: {
+		'default bn.js': [],
+	},
 	importsInternal: { './types.js': [], './state-accounts.js': [] },
 	output: [],
 }
 const generatedAccounts: Generated = {
 	importsExternal: {
-		'@solana/web3.js': "import { AccountInfo } from '@solana/web3.js'",
-		'@coral-xyz/anchor': "import { Program } from '@coral-xyz/anchor'",
+		'@solana/web3.js': [],
+		'@coral-xyz/anchor': ['Program'],
+		'default bn.js': [],
 	},
 	importsInternal: {
 		'./types.js': [],
@@ -48,8 +55,9 @@ const generatedAccounts: Generated = {
 }
 const generatedInstructions: Generated = {
 	importsExternal: {
-		'@solana/web3.js': "import { PublicKey } from '@solana/web3.js'",
-		'@coral-xyz/anchor': "import { Program } from '@coral-xyz/anchor'",
+		'@solana/web3.js': ['PublicKey'],
+		'@coral-xyz/anchor': ['Program'],
+		'default bn.js': [],
 	},
 	importsInternal: {
 		'./types.js': [],
@@ -70,77 +78,27 @@ IDLParsed.accounts?.forEach(({ name, type }) => {
 })
 IDLParsed.instructions?.forEach(({ name, accounts, args }) => {
 	const capitalizedName = `${name[0].toUpperCase()}${name.slice(1)}`
-	const accountsTypeName = `${capitalizedName}IxAccounts`
-	const argsTypeName = `${capitalizedName}IxArgs`
-	const paramsTypeName = `${capitalizedName}IxParams`
 
-	const composeAccountsType = () => {
-		const accountsProps = accounts.reduce((acc, { name: accountName }) => {
-			return acc + indent(`${accountName}: PublicKey`, 1, true)
-		}, '')
-		return `\nexport type ${accountsTypeName} = {\n${accountsProps}}\n`
-	}
+	const hasAccounts = accounts.length > 0
+	const hasArgs = args.length > 0
 
-	const composeArgsType = () => {
-		const argsNames: string[] = []
-		let argsProps = ''
-		args.forEach(({ type, name: argName }) => {
-			argsNames.push(`args.${argName},`)
-			argsProps += indent(`${argName}: ${getType(generatedInstructions, type)}`, 1, true)
-		})
-		return {
-			argsNames,
-			type: `\nexport type ${argsTypeName} = {\n${argsProps}}\n`,
-		}
-	}
+	const accountsType = composeAccountsType(accounts, capitalizedName)
+	const { type: argsType, argsNames } = composeArgs(args, capitalizedName, generatedInstructions)
+	const paramsType = composeParamsType({ hasAccounts, hasArgs, ixNameCapitalized: capitalizedName })
+	const ixFunction = composeInstructionFunction({
+		ixName: name,
+		ixNameCapitalized: capitalizedName,
+		idlTypeName: IDL_TYPE_NAME,
+		hasAccounts,
+		hasArgs,
+		argsNames,
+	})
 
-	const composeParamsType = () => {
-		let props = ''
-		if (accounts.length) {
-			props += indent(`accounts: ${accountsTypeName}`, 1, true)
-		}
-		if (args.length) {
-			props += indent(`args: ${argsTypeName}`, 1, true)
-		}
-		return props.length ? `\nexport type ${paramsTypeName} = {\n${props}}\n` : ''
-	}
-
-	const composeInstructionFunction = (argsNames: string[]) => {
-		const functionParamsNames: string[] = []
-		if (accounts.length) {
-			functionParamsNames.push('accounts')
-		}
-		if (args.length) {
-			functionParamsNames.push('args')
-		}
-		const functionParams = !functionParamsNames.length
-			? ''
-			: `, { ${functionParamsNames.join(', ')} }: ${paramsTypeName}`
-
-		const functionName = `build${capitalizedName}Ix`
-		return (
-			`\nexport const ${functionName} = async (program: Program<${IDL_TYPE_NAME}>${functionParams}) => {\n` +
-			indent(`const ix = await program.methods\n${indent(`.${name}`, 2)}(`, 1) +
-			(argsNames.length ? `\n${argsNames.map((n) => indent(n, 3, true)).join('')}\t\t` : '') +
-			')\n' +
-			(accounts.length ? indent('.accountsStrict(accounts)', 2, true) : '') +
-			indent('.instruction()', 2, true) +
-			indent('return ix', 1, true) +
-			'}\n'
-		)
-	}
-
-	const accountsType = composeAccountsType()
-	const { type: argsType, argsNames } = composeArgsType()
-	const paramsType = composeParamsType()
-	const ixFunction = composeInstructionFunction(argsNames)
-
-	const output =
-		`${buildSeparator(name)}` +
-		(accounts.length ? accountsType : '') +
-		(args.length ? argsType : '') +
-		paramsType +
-		ixFunction
+	let output = buildSeparator(name)
+	output += accountsType
+	output += argsType
+	output += paramsType
+	output += ixFunction
 
 	generatedInstructions.output.push(output)
 })
