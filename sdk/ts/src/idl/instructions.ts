@@ -1,21 +1,38 @@
 import { PublicKey } from '@solana/web3.js'
+import { Program } from '@coral-xyz/anchor'
 import BN from 'bn.js'
+
+import {
+	SurfIDL,
+} from './surf-idl.js'
 
 // ----------
 // initializeAdminConfig
 // ----------
 
-export type initializeAdminConfigIxAccounts = {
+export type InitializeAdminConfigIxAccounts = {
 	adminConfig: PublicKey
 	admin: PublicKey
 	systemProgram: PublicKey
+}
+
+export type InitializeAdminConfigIxParams = {
+	accounts: InitializeAdminConfigIxAccounts
+}
+
+export const buildInitializeAdminConfigIx = async (program: Program<SurfIDL>, { accounts }: InitializeAdminConfigIxParams) => {
+	const ix = await program.methods
+		.initializeAdminConfig()
+		.accountsStrict(accounts)
+		.instruction()
+	return ix
 }
 
 // ----------
 // initializeVault
 // ----------
 
-export type initializeVaultIxAccounts = {
+export type InitializeVaultIxAccounts = {
 	admin: PublicKey
 	adminConfig: PublicKey
 	whirlpool: PublicKey
@@ -35,18 +52,36 @@ export type initializeVaultIxAccounts = {
 	rent: PublicKey
 }
 
-export type initializeVaultIxArgs = {
+export type InitializeVaultIxArgs = {
 	driftSubaccountId: number
 	fullTickRange: number
 	vaultTickRange: number
 	hedgeTickRange: number
 }
 
+export type InitializeVaultIxParams = {
+	accounts: InitializeVaultIxAccounts
+	args: InitializeVaultIxArgs
+}
+
+export const buildInitializeVaultIx = async (program: Program<SurfIDL>, { accounts, args }: InitializeVaultIxParams) => {
+	const ix = await program.methods
+		.initializeVault(
+			args.driftSubaccountId,
+			args.fullTickRange,
+			args.vaultTickRange,
+			args.hedgeTickRange,
+		)
+		.accountsStrict(accounts)
+		.instruction()
+	return ix
+}
+
 // ----------
 // openWhirlpoolPosition
 // ----------
 
-export type openWhirlpoolPositionIxAccounts = {
+export type OpenWhirlpoolPositionIxAccounts = {
 	payer: PublicKey
 	whirlpool: PublicKey
 	vault: PublicKey
@@ -60,17 +95,34 @@ export type openWhirlpoolPositionIxAccounts = {
 	associatedTokenProgram: PublicKey
 }
 
-export type openWhirlpoolPositionIxArgs = {
+export type OpenWhirlpoolPositionIxArgs = {
 	positionBump: number
 	tickLowerIndex: number
 	tickUpperIndex: number
+}
+
+export type OpenWhirlpoolPositionIxParams = {
+	accounts: OpenWhirlpoolPositionIxAccounts
+	args: OpenWhirlpoolPositionIxArgs
+}
+
+export const buildOpenWhirlpoolPositionIx = async (program: Program<SurfIDL>, { accounts, args }: OpenWhirlpoolPositionIxParams) => {
+	const ix = await program.methods
+		.openWhirlpoolPosition(
+			args.positionBump,
+			args.tickLowerIndex,
+			args.tickUpperIndex,
+		)
+		.accountsStrict(accounts)
+		.instruction()
+	return ix
 }
 
 // ----------
 // deposit
 // ----------
 
-export type depositIxAccounts = {
+export type DepositIxAccounts = {
 	payer: PublicKey
 	payerBaseTokenAccount: PublicKey
 	payerQuoteTokenAccount: PublicKey
@@ -107,6 +159,21 @@ export type depositIxAccounts = {
 	systemProgram: PublicKey
 }
 
-export type depositIxArgs = {
+export type DepositIxArgs = {
 	inputQuoteAmount: BN
+}
+
+export type DepositIxParams = {
+	accounts: DepositIxAccounts
+	args: DepositIxArgs
+}
+
+export const buildDepositIx = async (program: Program<SurfIDL>, { accounts, args }: DepositIxParams) => {
+	const ix = await program.methods
+		.deposit(
+			args.inputQuoteAmount,
+		)
+		.accountsStrict(accounts)
+		.instruction()
+	return ix
 }

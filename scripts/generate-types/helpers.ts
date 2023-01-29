@@ -36,7 +36,7 @@ export const getType = (target: Generated, fieldType?: IdlType): string => {
 		return 'Record<string, never>'
 	}
 	if ('defined' in fieldType) {
-		target.importsInternal.add(`${fieldType.defined},`)
+		target.importsInternal['./types.js'].push(`${fieldType.defined},`)
 		return fieldType.defined
 	}
 	if ('vec' in fieldType) {
@@ -59,14 +59,26 @@ export const buildTypescriptType = (name: string, fields: IdlField[], target: Ge
 }
 
 export const composeFile = (target: Generated, forTypes?: boolean) => {
-	const externalImports = `${Object.values(target.importsExternal).join('\n')}\n`
-	const internalImports =
-		target.importsInternal.size > 0 && !forTypes
-			? `import {\n\t${[...target.importsInternal].join('\n')}\n} from './types.js'\n\n`
-			: ''
-	const types = target.types.join('\n')
+	const importsExternal = Object.values(target.importsExternal)
+	const importsInternal = Object.entries(target.importsInternal)
+		.map(([path, imports]) =>
+			imports.length ? `import {\n${imports.map((i) => `\t${i},\n`).join()}} from '${path}'` : null,
+		)
+		.filter(Boolean)
 
-	return `${externalImports}\n${internalImports}${types}`
+	return (
+		(forTypes ? '/* eslint-disable no-use-before-define */\n' : '') +
+		[
+			importsExternal.length ? `${importsExternal.join('\n')}\n` : null,
+			!forTypes && importsInternal.length ? `${importsInternal.join('\n')}\n` : null,
+			target.output.join('\n'),
+		]
+			.filter(Boolean)
+			.join('\n')
+	)
 }
 
 export const buildSeparator = (name: string) => `// ----------\n// ${name}\n// ----------\n`
+
+export const indent = (content: string, count: number, nl?: boolean) =>
+	`${'\t'.repeat(count)}${content}${nl ? '\n' : ''}`

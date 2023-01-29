@@ -8,7 +8,7 @@
         "format:idl:w": "find sdk/ts/src/idl | entr -c prettier sdk/ts/src/idl/**/*.ts -w",
 
         "build:scripts": "tsc --project scripts/tsconfig.json",
-        "build:program:w": "chmod +x ./scripts/anchor-build.sh && find programs | entr -c ./scripts/anchor-build.sh",
+        "build:program:w": "find programs | entr -c anchor build",
         
         "generate-types": "node scripts/dist/generate-types/index.js",
         "generate-types:w": "find target/idl | entr -c npm run generate-types",

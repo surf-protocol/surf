@@ -1,10 +1,6 @@
 import { PublicKey } from '@solana/web3.js'
 import BN from 'bn.js'
 
-// ----------
-// STATE ACCOUNTS
-// ----------
-
 export type AdminConfigAccount = {
 	adminKey: PublicKey
 	bump: number
