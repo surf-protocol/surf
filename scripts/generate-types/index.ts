@@ -3,7 +3,14 @@ import fs from 'node:fs'
 import path, { dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
-import { buildSeparator, buildTypescriptType, composeFile, getType, indent } from './helpers.js'
+import {
+	buildAccountParser,
+	buildSeparator,
+	buildTypescriptType,
+	composeFile,
+	getType,
+	indent,
+} from './helpers.js'
 import { Generated } from './types.js'
 
 const IDL_FILE_NAME = 'surf'
@@ -28,8 +35,15 @@ const generatedTypes: Generated = {
 	output: [],
 }
 const generatedAccounts: Generated = {
-	importsExternal: {},
-	importsInternal: { './types.js': [], './state-accounts.js': [] },
+	importsExternal: {
+		'@solana/web3.js': "import { AccountInfo } from '@solana/web3.js'",
+		'@coral-xyz/anchor': "import { Program } from '@coral-xyz/anchor'",
+	},
+	importsInternal: {
+		'./types.js': [],
+		'./state-accounts.js': [],
+		[`./${IDL_FILE_NAME}-idl.js`]: [IDL_TYPE_NAME],
+	},
 	output: [],
 }
 const generatedInstructions: Generated = {
@@ -50,9 +64,9 @@ IDLParsed.types?.forEach(({ name, type }) => {
 	generatedTypes.output.push(buildTypescriptType(name, fields, generatedTypes))
 })
 IDLParsed.accounts?.forEach(({ name, type }) => {
-	generatedAccounts.output.push(
-		buildTypescriptType(`${name}Account`, type.fields, generatedAccounts),
-	)
+	const typeName = `${name}Account`
+	generatedAccounts.output.push(buildTypescriptType(typeName, type.fields, generatedAccounts))
+	generatedAccounts.output.push(buildAccountParser(name, typeName))
 })
 IDLParsed.instructions?.forEach(({ name, accounts, args }) => {
 	const capitalizedName = `${name[0].toUpperCase()}${name.slice(1)}`
