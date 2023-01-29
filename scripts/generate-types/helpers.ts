@@ -1,5 +1,10 @@
 import { IdlNumberType, Generated, IdlPredefinedTypes, IdlType, IdlField } from './types.js'
 
+export const buildSeparator = (name: string) => `// ----------\n// ${name}\n// ----------\n`
+
+export const indent = (content: string, count: number, nl?: boolean) =>
+	`${'\t'.repeat(count)}${content}${nl ? '\n' : ''}`
+
 export const transformNumberToTs = (type: IdlNumberType, target: Generated) => {
 	const numType = type[0]
 	// eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -62,7 +67,9 @@ export const composeFile = (target: Generated, forTypes?: boolean) => {
 	const importsExternal = Object.values(target.importsExternal)
 	const importsInternal = Object.entries(target.importsInternal)
 		.map(([path, imports]) =>
-			imports.length ? `import {\n${imports.map((i) => `\t${i},\n`).join()}} from '${path}'` : null,
+			imports.length
+				? `import {\n${imports.map((i) => indent(`${i},`, 1, true)).join()}} from '${path}'`
+				: null,
 		)
 		.filter(Boolean)
 
@@ -78,7 +85,20 @@ export const composeFile = (target: Generated, forTypes?: boolean) => {
 	)
 }
 
-export const buildSeparator = (name: string) => `// ----------\n// ${name}\n// ----------\n`
-
-export const indent = (content: string, count: number, nl?: boolean) =>
-	`${'\t'.repeat(count)}${content}${nl ? '\n' : ''}`
+export const buildAccountParser = (capitalizedName: string, typeName: string) => {
+	const parserName = `parse${typeName}`
+	const name = capitalizedName[0].toLowerCase() + capitalizedName.slice(1)
+	return (
+		`export const ${parserName} = (program: Program<SurfIDL>, data: Buffer | null) => {\n` +
+		indent('if (!data) {', 1, true) +
+		indent('return null', 2, true) +
+		indent('}', 1, true) +
+		indent('try {', 1, true) +
+		indent(`return program.coder.accounts.decode('${name}', data) as ${typeName}`, 2, true) +
+		indent('} catch {', 1, true) +
+		indent(`console.error('Account ${name} could not be parsed')`, 2, true) +
+		indent('return null', 2, true) +
+		indent('}', 1, true) +
+		'}\n'
+	)
+}

@@ -2,9 +2,7 @@ import { PublicKey } from '@solana/web3.js'
 import { Program } from '@coral-xyz/anchor'
 import BN from 'bn.js'
 
-import {
-	SurfIDL,
-} from './surf-idl.js'
+import { SurfIDL } from './surf-idl.js'
 
 // ----------
 // initializeAdminConfig
@@ -20,11 +18,11 @@ export type InitializeAdminConfigIxParams = {
 	accounts: InitializeAdminConfigIxAccounts
 }
 
-export const buildInitializeAdminConfigIx = async (program: Program<SurfIDL>, { accounts }: InitializeAdminConfigIxParams) => {
-	const ix = await program.methods
-		.initializeAdminConfig()
-		.accountsStrict(accounts)
-		.instruction()
+export const buildInitializeAdminConfigIx = async (
+	program: Program<SurfIDL>,
+	{ accounts }: InitializeAdminConfigIxParams,
+) => {
+	const ix = await program.methods.initializeAdminConfig().accountsStrict(accounts).instruction()
 	return ix
 }
 
@@ -64,7 +62,10 @@ export type InitializeVaultIxParams = {
 	args: InitializeVaultIxArgs
 }
 
-export const buildInitializeVaultIx = async (program: Program<SurfIDL>, { accounts, args }: InitializeVaultIxParams) => {
+export const buildInitializeVaultIx = async (
+	program: Program<SurfIDL>,
+	{ accounts, args }: InitializeVaultIxParams,
+) => {
 	const ix = await program.methods
 		.initializeVault(
 			args.driftSubaccountId,
@@ -106,13 +107,12 @@ export type OpenWhirlpoolPositionIxParams = {
 	args: OpenWhirlpoolPositionIxArgs
 }
 
-export const buildOpenWhirlpoolPositionIx = async (program: Program<SurfIDL>, { accounts, args }: OpenWhirlpoolPositionIxParams) => {
+export const buildOpenWhirlpoolPositionIx = async (
+	program: Program<SurfIDL>,
+	{ accounts, args }: OpenWhirlpoolPositionIxParams,
+) => {
 	const ix = await program.methods
-		.openWhirlpoolPosition(
-			args.positionBump,
-			args.tickLowerIndex,
-			args.tickUpperIndex,
-		)
+		.openWhirlpoolPosition(args.positionBump, args.tickLowerIndex, args.tickUpperIndex)
 		.accountsStrict(accounts)
 		.instruction()
 	return ix
@@ -168,11 +168,12 @@ export type DepositIxParams = {
 	args: DepositIxArgs
 }
 
-export const buildDepositIx = async (program: Program<SurfIDL>, { accounts, args }: DepositIxParams) => {
+export const buildDepositIx = async (
+	program: Program<SurfIDL>,
+	{ accounts, args }: DepositIxParams,
+) => {
 	const ix = await program.methods
-		.deposit(
-			args.inputQuoteAmount,
-		)
+		.deposit(args.inputQuoteAmount)
 		.accountsStrict(accounts)
 		.instruction()
 	return ix
