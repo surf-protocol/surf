@@ -19,18 +19,11 @@ pub mod surf {
 
     pub fn initialize_vault(
         ctx: Context<InitializeVault>,
-        drift_subaccount_id: u16,
         full_tick_range: u32,
         vault_tick_range: u32,
         hedge_tick_range: u32,
     ) -> Result<()> {
-        initialize_vault::handler(
-            ctx,
-            drift_subaccount_id,
-            full_tick_range,
-            vault_tick_range,
-            hedge_tick_range,
-        )
+        initialize_vault::handler(ctx, full_tick_range, vault_tick_range, hedge_tick_range)
     }
 
     pub fn open_whirlpool_position(

@@ -239,11 +239,11 @@ pub struct Deposit<'info> {
     )]
     pub vault: Box<Account<'info, Vault>>,
     #[account(mut,
-        address = vault.base_token_vault.key()
+        address = vault.base_token_account.key()
     )]
     pub vault_base_token_account: Box<Account<'info, TokenAccount>>,
     #[account(mut,
-        address = vault.quote_token_vault.key()
+        address = vault.quote_token_account.key()
     )]
     pub vault_quote_token_account: Box<Account<'info, TokenAccount>>,
 

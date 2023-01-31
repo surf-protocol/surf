@@ -183,25 +183,6 @@ export const initWhirlpool = async () => {
 	}
 }
 
-export const getPositionAccountsAddresses = (owner: PublicKey, offCurve = true) => {
-	const whirlpoolPositionMintKeyPair = new Keypair()
-	const whirlpoolPositionATA = getAssociatedTokenAddressSync(
-		whirlpoolPositionMintKeyPair.publicKey,
-		owner,
-		offCurve,
-	)
-	const whirlpoolPositionPDA = PDAUtil.getPosition(
-		ORCA_WHIRLPOOL_PROGRAM_ID,
-		whirlpoolPositionMintKeyPair.publicKey,
-	)
-
-	return {
-		whirlpoolPositionMintKeyPair,
-		whirlpoolPositionATA,
-		whirlpoolPositionPDA,
-	}
-}
-
 // Create and fund dummy position
 export const fundPosition = async (
 	inputQuoteAmount: BN,
@@ -209,17 +190,23 @@ export const fundPosition = async (
 	whirlpoolData: WhirlpoolData,
 	tickArrays: Record<number, PDA>,
 ) => {
-	const { whirlpoolPositionATA, whirlpoolPositionMintKeyPair, whirlpoolPositionPDA } =
-		getPositionAccountsAddresses(wallet.publicKey, false)
+	const positionMintKeyPair = new Keypair()
+	const positionATA = getAssociatedTokenAddressSync(
+		positionMintKeyPair.publicKey,
+		wallet.publicKey,
+		false,
+	)
+	const positionPDA = PDAUtil.getPosition(ORCA_WHIRLPOOL_PROGRAM_ID, positionMintKeyPair.publicKey)
+
 	const ticksInArray = DEFAULT_TICK_SPACING * TICK_ARRAY_SIZE
 	const upperTickIndex = DEFAULT_START_TICK + 3 * ticksInArray
 	const lowerTickIndex = DEFAULT_START_TICK - 3 * ticksInArray
 	const openPositionIx = WhirlpoolIx.openPositionIx(whirlpoolProgram, {
 		whirlpool: whirlpoolKey,
 		owner: wallet.publicKey,
-		positionPda: whirlpoolPositionPDA,
-		positionMintAddress: whirlpoolPositionMintKeyPair.publicKey,
-		positionTokenAccount: whirlpoolPositionATA,
+		positionPda: positionPDA,
+		positionMintAddress: positionMintKeyPair.publicKey,
+		positionTokenAccount: positionATA,
 		tickLowerIndex: lowerTickIndex,
 		tickUpperIndex: upperTickIndex,
 		funder: wallet.publicKey,
@@ -238,8 +225,8 @@ export const fundPosition = async (
 	const increaseLiquidityIx = WhirlpoolIx.increaseLiquidityIx(whirlpoolProgram, {
 		...increaseLiquidityQuote,
 		...whirlpoolData,
-		position: whirlpoolPositionPDA.publicKey,
-		positionTokenAccount: whirlpoolPositionATA,
+		position: positionPDA.publicKey,
+		positionTokenAccount: positionATA,
 		whirlpool: whirlpoolKey,
 		positionAuthority: wallet.publicKey,
 		tokenOwnerAccountA: baseTokenATA,
@@ -250,7 +237,7 @@ export const fundPosition = async (
 
 	await buildAndSendTx(
 		connection,
-		[wallet, whirlpoolPositionMintKeyPair],
+		[wallet, positionMintKeyPair],
 		[...openPositionIx, ...increaseLiquidityIx],
 	)
 }

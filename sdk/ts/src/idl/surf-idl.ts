@@ -47,22 +47,22 @@ export type SurfIDL = {
 					isSigner: false
 				},
 				{
-					name: 'tokenMintA'
+					name: 'baseTokenMint'
 					isMut: false
 					isSigner: false
 				},
 				{
-					name: 'tokenVaultA'
+					name: 'quoteTokenMint'
+					isMut: false
+					isSigner: false
+				},
+				{
+					name: 'vaultBaseTokenAccount'
 					isMut: true
 					isSigner: false
 				},
 				{
-					name: 'tokenMintB'
-					isMut: false
-					isSigner: false
-				},
-				{
-					name: 'tokenVaultB'
+					name: 'vaultQuoteTokenAccount'
 					isMut: true
 					isSigner: false
 				},
@@ -113,10 +113,6 @@ export type SurfIDL = {
 				},
 			]
 			args: [
-				{
-					name: 'driftSubaccountId'
-					type: 'u16'
-				},
 				{
 					name: 'fullTickRange'
 					type: 'u32'
@@ -458,7 +454,7 @@ export type SurfIDL = {
 						type: 'publicKey'
 					},
 					{
-						name: 'baseTokenVault'
+						name: 'baseTokenAccount'
 						type: 'publicKey'
 					},
 					{
@@ -466,7 +462,7 @@ export type SurfIDL = {
 						type: 'publicKey'
 					},
 					{
-						name: 'quoteTokenVault'
+						name: 'quoteTokenAccount'
 						type: 'publicKey'
 					},
 					{
@@ -541,61 +537,66 @@ export type SurfIDL = {
 		},
 		{
 			code: 6001
+			name: 'InvalidQuoteTokenMint'
+			msg: 'Quote token mint has to be USDC'
+		},
+		{
+			code: 6002
 			name: 'FullTickRangeTooSmall'
 			msg: 'Whirlpool position price range should be higher than 400 ticks'
 		},
 		{
-			code: 6002
+			code: 6003
 			name: 'VaultTickRangeTooSmall'
 			msg: 'Vault tick range should be higher than 200 ticks'
 		},
 		{
-			code: 6003
+			code: 6004
 			name: 'VaultTickRangeTooBig'
 			msg: 'Vault tick range should be lower or equal than 50% of full tick range'
 		},
 		{
-			code: 6004
+			code: 6005
 			name: 'HedgeTickRangeTooSmall'
 			msg: 'Hegde tick range should be higher than 20 ticks'
 		},
 		{
-			code: 6005
+			code: 6006
 			name: 'HedgeTickRangeTooBig'
 			msg: 'Hegde tick range should be lower than vault tick range'
 		},
 		{
-			code: 6006
+			code: 6007
 			name: 'InvalidDriftAccountStatsAccount'
 			msg: 'Could not deserialize drift_account_stats'
 		},
 		{
-			code: 6007
+			code: 6008
 			name: 'InvalidTickIndexes'
 			msg: 'Lower tick index must be lower than upper tick index'
 		},
 		{
-			code: 6008
+			code: 6009
 			name: 'InvalidProvidedTickRange'
 			msg: 'Provided tick range does not correspond to vault preset'
 		},
 		{
-			code: 6009
+			code: 6010
 			name: 'CurrentTickIndexShiftedFromMidRange'
 			msg: 'Current tick index is shifted too many ticks from middle of full tick range'
 		},
 		{
-			code: 6010
+			code: 6011
 			name: 'TickIndexOverflow'
 			msg: 'Tick index is either lower than -443636 or higher than 443636'
 		},
 		{
-			code: 6011
+			code: 6012
 			name: 'NumberDownCastError'
 			msg: 'Unable to down cast number'
 		},
 		{
-			code: 6012
+			code: 6013
 			name: 'BaseTokenOverflow'
 			msg: 'Input quote amount is too high'
 		},

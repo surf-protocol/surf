@@ -6,6 +6,9 @@ pub enum SurfError {
     #[msg("admin account key does not correspond with admin_config admin_key")]
     InvalidAdmin,
 
+    #[msg("Quote token mint has to be USDC")]
+    InvalidQuoteTokenMint,
+
     // Possibly change the amount of ticks later
     #[msg("Whirlpool position price range should be higher than 400 ticks")]
     FullTickRangeTooSmall,

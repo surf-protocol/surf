@@ -3,11 +3,12 @@ use anchor_lang::prelude::*;
 pub mod pc;
 use pc::Price;
 
+#[cfg(not(feature = "test"))]
+declare_id!("FsJ3A3u2vn5cTVofAjvy6y5kwABJAqYWpe4975bi2epH");
+#[cfg(feature = "test")]
 declare_id!("7SueGc5Y5CPE26SMJ3jPNP5fJaaQTE4aE8LctXawz476");
 // #[cfg(feature = "mainnet-beta")]
 // declare_id!("FsJ3A3u2vn5cTVofAjvy6y5kwABJAqYWpe4975bi2epH");
-// #[cfg(not(feature = "mainnet-beta"))]
-// declare_id!("gSbePebfvPy7tRqimPoVecS2UsBvYv46ynrzWocc92s");
 
 #[program]
 pub mod pyth {

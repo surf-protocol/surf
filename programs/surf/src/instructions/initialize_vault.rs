@@ -1,13 +1,14 @@
 use anchor_lang::prelude::*;
 use anchor_spl::{
     associated_token::AssociatedToken,
+    mint,
     token::{Mint, Token, TokenAccount},
 };
 use drift::{
     cpi as drift_cpi,
-    cpi::accounts::{InitializeUser, InitializeUserStats, UpdateUser},
+    cpi::accounts::{InitializeUser, InitializeUserStats},
     program::Drift as DriftProgram,
-    state::{state::State, user::UserStats},
+    state::state::State,
 };
 use whirlpools::{program::Whirlpool as WhirlpoolProgram, state::Whirlpool};
 
@@ -18,14 +19,14 @@ use crate::{
 };
 
 // TODO: Add custom errors
-// TODO: Limit to only USDC markets
 pub fn handler(
     ctx: Context<InitializeVault>,
-    drift_subaccount_id: u16,
     full_tick_range: u32,
     vault_tick_range: u32,
     hedge_tick_range: u32,
 ) -> Result<()> {
+    // --------
+    // Validate tick ranges
     if full_tick_range < 400 {
         return Err(SurfError::FullTickRangeTooSmall.into());
     }
@@ -43,67 +44,42 @@ pub fn handler(
         return Err(SurfError::HedgeTickRangeTooBig.into());
     }
 
-    let rent = &ctx.accounts.rent;
-    let system_program = &ctx.accounts.system_program;
+    // --------
+    // Initialize drift stats
+    let vault_bump = ctx.bumps.get("vault").unwrap();
+    let whirlpool_key = ctx.accounts.whirlpool.key();
 
-    // Init drift user stats for admin_config if needed
-    let admin_config_bump = ctx.accounts.admin_config.bump;
-    let drift_program_signer_seeds: &[&[&[u8]]] =
-        &[&[AdminConfig::NAMESPACE.as_ref(), &[admin_config_bump]]];
+    let drift_program_signer_seeds: &[&[&[u8]]] = &[&[
+        Vault::NAMESPACE.as_ref(),
+        &whirlpool_key.as_ref(),
+        &[*vault_bump],
+    ]];
 
-    let drift_program = &ctx.accounts.drift_program;
-    let drift_user_stats = &ctx.accounts.drift_stats;
+    let init_drift_user_stats_context = ctx.accounts.get_initialize_user_stats_context();
+    drift_cpi::initialize_user_stats(
+        init_drift_user_stats_context.with_signer(drift_program_signer_seeds),
+    )?;
+    ctx.accounts.drift_state.reload()?;
 
-    if drift_user_stats.data_is_empty() {
-        let init_drift_user_stats_context = ctx.accounts.get_initialize_user_stats_context(
-            drift_program,
-            system_program,
-            rent,
-            drift_program_signer_seeds,
-        );
-        drift_cpi::initialize_user_stats(init_drift_user_stats_context)?;
-        ctx.accounts.drift_state.reload()?;
-    }
-
-    // Init user
-    let user_stats_loader: AccountLoader<UserStats> = AccountLoader::try_from(&drift_user_stats)
-        .or(Err(SurfError::InvalidDriftAccountStatsAccount))?;
-
+    // --------
+    // Initialize drift subaccount
     let (init_drift_user_context, drift_subaccount_name) =
-        ctx.accounts.get_initialize_user_context_and_args(
-            user_stats_loader,
-            drift_program,
-            system_program,
-            rent,
-            drift_program_signer_seeds,
-        );
+        ctx.accounts.get_initialize_user_context_and_args();
     drift_cpi::initialize_user(
-        init_drift_user_context,
-        drift_subaccount_id,
+        init_drift_user_context.with_signer(drift_program_signer_seeds),
+        0,
         drift_subaccount_name,
     )?;
 
-    let vault_bump = ctx.bumps.get("vault").unwrap();
-
-    // Update delegate
-    let update_subaccount_delegate_context =
-        ctx.accounts.get_update_drift_subaccount_delegate_context();
-    drift_cpi::update_user_delegate(
-        update_subaccount_delegate_context.with_signer(&[&[
-            AdminConfig::NAMESPACE.as_ref(),
-            &[ctx.accounts.admin_config.bump],
-        ]]),
-        drift_subaccount_id,
-        ctx.accounts.vault.key(),
-    )?;
-
+    // --------
+    // Initialize vault
     ctx.accounts.vault.initialize(
         *vault_bump,
         ctx.accounts.whirlpool.key(),
-        ctx.accounts.token_mint_a.key(),
-        ctx.accounts.token_mint_b.key(),
-        ctx.accounts.token_vault_a.key(),
-        ctx.accounts.token_vault_b.key(),
+        ctx.accounts.base_token_mint.key(),
+        ctx.accounts.quote_token_mint.key(),
+        ctx.accounts.vault_base_token_account.key(),
+        ctx.accounts.vault_quote_token_account.key(),
         ctx.accounts.drift_stats.key(),
         ctx.accounts.drift_subaccount.key(),
         full_tick_range,
@@ -116,7 +92,6 @@ pub fn handler(
 
 // TODO: Check if token mints correspond with vault token mints in subsequent ixs
 #[derive(Accounts)]
-#[instruction(drift_subaccount_id: u16)]
 pub struct InitializeVault<'info> {
     #[account(mut)]
     pub admin: Signer<'info>,
@@ -129,10 +104,12 @@ pub struct InitializeVault<'info> {
     pub admin_config: Account<'info, AdminConfig>,
 
     #[account(
-        constraint = whirlpool.token_mint_a.eq(&token_mint_a.key()) && whirlpool.token_mint_b.eq(&token_mint_b.key())
+        constraint = whirlpool.token_mint_a.eq(&base_token_mint.key()) && whirlpool.token_mint_b.eq(&quote_token_mint.key())
     )]
     pub whirlpool: Box<Account<'info, Whirlpool>>,
 
+    // ------
+    // Vault accounts
     #[account(init,
         seeds = [
             Vault::NAMESPACE.as_ref(),
@@ -144,28 +121,35 @@ pub struct InitializeVault<'info> {
     )]
     pub vault: Box<Account<'info, Vault>>,
 
-    pub token_mint_a: Box<Account<'info, Mint>>,
+    pub base_token_mint: Box<Account<'info, Mint>>,
+    #[cfg_attr(
+        not(feature = "test"),
+        account(
+            address = mint::USDC @SurfError::InvalidQuoteTokenMint,
+        ),
+    )]
+    pub quote_token_mint: Box<Account<'info, Mint>>,
+
     #[account(init,
         payer = admin,
-        associated_token::mint = token_mint_a,
+        associated_token::mint = base_token_mint,
         associated_token::authority = vault
     )]
-    pub token_vault_a: Box<Account<'info, TokenAccount>>,
-
-    pub token_mint_b: Box<Account<'info, Mint>>,
+    pub vault_base_token_account: Box<Account<'info, TokenAccount>>,
     #[account(init,
         payer = admin,
-        associated_token::mint = token_mint_b,
+        associated_token::mint = quote_token_mint,
         associated_token::authority = vault
     )]
-    pub token_vault_b: Box<Account<'info, TokenAccount>>,
+    pub vault_quote_token_account: Box<Account<'info, TokenAccount>>,
 
-    // TODO: Initialize drift accounts with vault as authority
+    // ------
+    // Drift accounts
     /// CHECK: Drift program validates the account in the CPI
     #[account(mut,
         seeds = [
             b"user_stats".as_ref(),
-            admin_config.key().as_ref(),
+            vault.key().as_ref(),
         ],
         bump,
         seeds::program = drift_program.key(),
@@ -176,8 +160,8 @@ pub struct InitializeVault<'info> {
     #[account(mut,
         seeds = [
             b"user".as_ref(),
-            admin_config.key().as_ref(),
-            drift_subaccount_id.to_le_bytes().as_ref()
+            vault.key().as_ref(),
+            0_u16.to_le_bytes().as_ref()
         ],
         bump,
         seeds::program = drift_program.key(),
@@ -196,67 +180,45 @@ pub struct InitializeVault<'info> {
 }
 
 impl<'info> InitializeVault<'info> {
-    pub fn get_initialize_user_stats_context<'a>(
-        &'a self,
-        drift_program: &Program<'info, DriftProgram>,
-        system_program: &Program<'info, System>,
-        rent: &Sysvar<'info, Rent>,
-        signer_seeds: &'a [&[&[u8]]],
+    pub fn get_initialize_user_stats_context(
+        &self,
     ) -> CpiContext<'_, '_, '_, 'info, InitializeUserStats<'info>> {
         let init_drift_user_stats_accounts = InitializeUserStats {
             user_stats: self.drift_stats.to_account_info(),
             state: self.drift_state.to_account_info(),
-            authority: self.admin_config.to_account_info(),
+            authority: self.vault.to_account_info(),
             payer: self.admin.to_account_info(),
-            rent: rent.to_account_info(),
-            system_program: system_program.to_account_info(),
+            rent: self.rent.to_account_info(),
+            system_program: self.system_program.to_account_info(),
         };
-        CpiContext::new_with_signer(
-            drift_program.to_account_info(),
+        CpiContext::new(
+            self.drift_program.to_account_info(),
             init_drift_user_stats_accounts,
-            signer_seeds,
         )
     }
 
-    pub fn get_initialize_user_context_and_args<'a>(
-        &'a self,
-        user_stats: AccountLoader<'info, UserStats>,
-        drift_program: &Program<'info, DriftProgram>,
-        system_program: &Program<'info, System>,
-        rent: &Sysvar<'info, Rent>,
-        signer_seeds: &'a [&[&[u8]]],
+    pub fn get_initialize_user_context_and_args(
+        &self,
     ) -> (
         CpiContext<'_, '_, '_, 'info, InitializeUser<'info>>,
         [u8; 32],
     ) {
         let drift_subaccount_name: [u8; 32] = [32; 32];
-
         let init_drift_user_accounts = InitializeUser {
-            user_stats: user_stats.to_account_info(),
+            user_stats: self.drift_stats.to_account_info(),
             payer: self.admin.to_account_info(),
-            authority: self.admin_config.to_account_info(),
+            authority: self.vault.to_account_info(),
             state: self.drift_state.to_account_info(),
             user: self.drift_subaccount.to_account_info(),
-            rent: rent.to_account_info(),
-            system_program: system_program.to_account_info(),
+            rent: self.rent.to_account_info(),
+            system_program: self.system_program.to_account_info(),
         };
         (
-            CpiContext::new_with_signer(
-                drift_program.to_account_info(),
+            CpiContext::new(
+                self.drift_program.to_account_info(),
                 init_drift_user_accounts,
-                signer_seeds,
             ),
             drift_subaccount_name,
         )
-    }
-
-    pub fn get_update_drift_subaccount_delegate_context(
-        &self,
-    ) -> CpiContext<'_, '_, '_, 'info, UpdateUser<'info>> {
-        let accounts = UpdateUser {
-            authority: self.admin_config.to_account_info(),
-            user: self.drift_subaccount.to_account_info(),
-        };
-        CpiContext::new(self.drift_program.to_account_info(), accounts)
     }
 }

@@ -7,11 +7,11 @@ pub struct Vault {
 
     pub whirlpool: Pubkey, // 32
 
-    pub base_token_mint: Pubkey,  // 32
-    pub base_token_vault: Pubkey, // 32
+    pub base_token_mint: Pubkey,    // 32
+    pub base_token_account: Pubkey, // 32
 
-    pub quote_token_mint: Pubkey,  // 32
-    pub quote_token_vault: Pubkey, // 32
+    pub quote_token_mint: Pubkey,    // 32
+    pub quote_token_account: Pubkey, // 32
 
     pub drift_stats: Pubkey,      // 32
     pub drift_subaccount: Pubkey, // 32
@@ -54,8 +54,8 @@ impl Vault {
         whirlpool: Pubkey,
         base_token_mint: Pubkey,
         quote_token_mint: Pubkey,
-        base_token_vault: Pubkey,
-        quote_token_vault: Pubkey,
+        base_token_account: Pubkey,
+        quote_token_account: Pubkey,
         drift_stats: Pubkey,
         drift_subaccount: Pubkey,
         full_tick_range: u32,
@@ -67,8 +67,8 @@ impl Vault {
 
         self.base_token_mint = base_token_mint;
         self.quote_token_mint = quote_token_mint;
-        self.base_token_vault = base_token_vault;
-        self.quote_token_vault = quote_token_vault;
+        self.base_token_account = base_token_account;
+        self.quote_token_account = quote_token_account;
 
         self.drift_stats = drift_stats;
         self.drift_subaccount = drift_subaccount;

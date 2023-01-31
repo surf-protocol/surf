@@ -5,7 +5,6 @@ import {
 	QUOTE_PRECISION,
 	SPOT_MARKET_RATE_PRECISION,
 	SPOT_MARKET_WEIGHT_PRECISION,
-	UserStatsAccount,
 	getSpotMarketPublicKey,
 	getSpotMarketVaultPublicKey,
 } from '@drift-labs/sdk'
@@ -17,10 +16,9 @@ import { mockOracle } from './pyth.js'
 import { connection, provider } from '../load-config.js'
 import { baseTokenMint, quoteMintKeyPair } from '../mint.js'
 import { DriftIdl } from './drift-idl.js'
+import { DRIFT_PROGRAM_ID_MAINNET } from '../../../sdk/ts/src/constants.js'
 
 const quoteMint = quoteMintKeyPair.publicKey
-
-export const DRIFT_PROGRAM_ID = new PublicKey('dRiftyHA39MWEi3m9aunc5MzRF1JYuBsbn6VPcn33UH')
 
 const baseTokenOracleMint = new Keypair()
 export const driftOracle = baseTokenOracleMint.publicKey
@@ -28,7 +26,7 @@ export const driftOracle = baseTokenOracleMint.publicKey
 const adminClient = new TestClient({
 	connection,
 	wallet: provider.wallet,
-	programID: DRIFT_PROGRAM_ID,
+	programID: DRIFT_PROGRAM_ID_MAINNET,
 	activeSubAccountId: 0,
 	perpMarketIndexes: [0],
 	spotMarketIndexes: [0],
@@ -52,20 +50,22 @@ const initializeQuoteSpotMarket = async () => {
 	const maintenanceLiabilityWeight = SPOT_MARKET_WEIGHT_PRECISION.toNumber()
 	const imfFactor = 0
 
-	await adminClient.initializeSpotMarket(
-		quoteMint,
-		optimalUtilization,
-		optimalRate,
-		maxRate,
-		PublicKey.default,
-		OracleSource.QUOTE_ASSET,
-		initialAssetWeight,
-		maintenanceAssetWeight,
-		initialLiabilityWeight,
-		maintenanceLiabilityWeight,
-		imfFactor,
-	)
-	await adminClient.updateWithdrawGuardThreshold(0, new BN(10 ** 10).mul(QUOTE_PRECISION))
+	try {
+		await adminClient.initializeSpotMarket(
+			quoteMint,
+			optimalUtilization,
+			optimalRate,
+			maxRate,
+			PublicKey.default,
+			OracleSource.QUOTE_ASSET,
+			initialAssetWeight,
+			maintenanceAssetWeight,
+			initialLiabilityWeight,
+			maintenanceLiabilityWeight,
+			imfFactor,
+		)
+		await adminClient.updateWithdrawGuardThreshold(0, new BN(10 ** 10).mul(QUOTE_PRECISION))
+	} catch {}
 }
 
 const initializeBaseSpotMarket = async () => {
@@ -83,21 +83,22 @@ const initializeBaseSpotMarket = async () => {
 		.mul(new BN(11))
 		.toNumber()
 
-	await adminClient.initializeSpotMarket(
-		baseTokenMint,
-		optimalUtilization,
-		optimalRate,
-		maxRate,
-		baseTokenOracleMint.publicKey,
-		OracleSource.PYTH,
-		initialAssetWeight,
-		maintenanceAssetWeight,
-		initialLiabilityWeight,
-		maintenanceLiabilityWeight,
-		3000,
-	)
-
-	await adminClient.updateWithdrawGuardThreshold(1, new BN(10 ** 10).mul(QUOTE_PRECISION))
+	try {
+		await adminClient.initializeSpotMarket(
+			baseTokenMint,
+			optimalUtilization,
+			optimalRate,
+			maxRate,
+			baseTokenOracleMint.publicKey,
+			OracleSource.PYTH,
+			initialAssetWeight,
+			maintenanceAssetWeight,
+			initialLiabilityWeight,
+			maintenanceLiabilityWeight,
+			3000,
+		)
+		await adminClient.updateWithdrawGuardThreshold(1, new BN(10 ** 10).mul(QUOTE_PRECISION))
+	} catch {}
 }
 
 export const initDrift = async () => {
@@ -138,8 +139,11 @@ export const initDrift = async () => {
 		[driftBaseSpotMarketPDA, driftBaseSpotMarketVaultPDA],
 	] = await Promise.all(
 		[0, 1].map(async (mi) => {
-			const driftSpotMarketPDA = await getSpotMarketPublicKey(DRIFT_PROGRAM_ID, mi)
-			const driftSpotMarketVaultPDA = await getSpotMarketVaultPublicKey(DRIFT_PROGRAM_ID, mi)
+			const driftSpotMarketPDA = await getSpotMarketPublicKey(DRIFT_PROGRAM_ID_MAINNET, mi)
+			const driftSpotMarketVaultPDA = await getSpotMarketVaultPublicKey(
+				DRIFT_PROGRAM_ID_MAINNET,
+				mi,
+			)
 			return [driftSpotMarketPDA, driftSpotMarketVaultPDA]
 		}),
 	)
@@ -150,37 +154,5 @@ export const initDrift = async () => {
 		driftQuoteSpotMarketPDA,
 		driftQuoteSpotMarketVaultPDA,
 		driftProgram: adminClient.program as unknown as Program<DriftIdl>,
-	}
-}
-
-export const getDriftPDAccounts = async (adminConfigPDA: PublicKey) => {
-	const [userStatsPDA] = PublicKey.findProgramAddressSync(
-		[Buffer.from('user_stats', 'utf-8'), adminConfigPDA.toBuffer()],
-		DRIFT_PROGRAM_ID,
-	)
-
-	const userStatsAi = await connection.getAccountInfo(userStatsPDA)
-	let userSubaccountId = 0
-	if (userStatsAi?.data) {
-		const userStatsAccount = (await driftProgram.coder.accounts.decode(
-			'UserStats',
-			userStatsAi.data,
-		)) as UserStatsAccount
-		userSubaccountId = userStatsAccount.numberOfSubAccounts
-	}
-
-	const [userSubaccountPDA] = PublicKey.findProgramAddressSync(
-		[
-			Buffer.from('user', 'utf-8'),
-			adminConfigPDA.toBuffer(),
-			new BN(userSubaccountId).toArrayLike(Buffer, 'le', 2),
-		],
-		DRIFT_PROGRAM_ID,
-	)
-
-	return {
-		userStatsPDA,
-		userSubaccountPDA,
-		userSubaccountId,
 	}
 }
