@@ -13,44 +13,24 @@ use crate::{
     utils::orca::tick_math::{get_initializable_tick_index, MAX_TICK_INDEX, MIN_TICK_INDEX},
 };
 
-pub fn handler(
-    ctx: Context<OpenWhirlpoolPosition>,
-    position_bump: u8,
-    // TODO: Remove tick indexes, calculate from ranges in vault
-    // Tick indexes without accounting for tick spacing
-    tick_lower_index: i32,
-    tick_upper_index: i32,
-) -> Result<()> {
-    // Check ticks validity
-    if tick_upper_index <= tick_lower_index {
-        return Err(SurfError::InvalidTickIndexes.into());
-    }
-    if tick_upper_index > MAX_TICK_INDEX || tick_lower_index < MIN_TICK_INDEX {
-        return Err(SurfError::TickIndexOverflow.into());
-    }
-
-    // Check range
+pub fn handler(ctx: Context<OpenWhirlpoolPosition>, position_bump: u8) -> Result<()> {
     let full_tick_range = ctx.accounts.vault.full_tick_range;
-    let provided_range = (tick_upper_index - tick_lower_index).abs() as u32;
+    let one_side_tick_range = (full_tick_range / 2) as i32;
 
-    if provided_range != full_tick_range {
-        return Err(SurfError::InvalidProvidedTickRange.into());
-    }
-
-    // Check if current tick is in the middle of full range
     let current_tick_index = ctx.accounts.whirlpool.tick_current_index;
-    let half_range = full_tick_range as i32 / 2 - 5;
+    let tick_upper_index = current_tick_index + one_side_tick_range;
+    let tick_lower_index = current_tick_index - one_side_tick_range;
 
-    if current_tick_index + half_range > tick_upper_index
-        || current_tick_index - half_range < tick_lower_index
-    {
-        return Err(SurfError::CurrentTickIndexShiftedFromMidRange.into());
-    }
-
-    // Create position
     let tick_spacing = ctx.accounts.whirlpool.tick_spacing;
     let tick_upper_initializable = get_initializable_tick_index(tick_upper_index, tick_spacing);
     let tick_lower_initializable = get_initializable_tick_index(tick_lower_index, tick_spacing);
+
+    if tick_upper_initializable > MAX_TICK_INDEX {
+        return Err(SurfError::UpperTickIndexOutOfBounds.into());
+    }
+    if tick_lower_initializable < MIN_TICK_INDEX {
+        return Err(SurfError::LowerTickIndexOutOfBounds.into());
+    }
 
     let whirlpool_cpi = ctx.accounts.get_open_whirlpool_position_context();
     whirlpool_cpi::open_position(

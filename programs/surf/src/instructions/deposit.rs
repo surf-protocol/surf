@@ -18,7 +18,7 @@ use whirlpools::{
     Position as WhirlpoolPosition, TickArray, Whirlpool,
 };
 use whirlpools_client::{
-    errors::ErrorCode,
+    errors::ErrorCode as WhirlpoolsErrorCode,
     math::{
         get_amount_delta_a, get_amount_delta_b, sqrt_price_from_tick_index, MAX_SQRT_PRICE_X64,
     },
@@ -194,7 +194,7 @@ pub struct Deposit<'info> {
     pub admin_config: Box<Account<'info, AdminConfig>>,
 
     // -------------
-    // Swap accounts
+    // Prepare swap accounts
     #[account(mut)]
     pub prepare_swap_whirlpool: Box<Account<'info, Whirlpool>>,
 
@@ -417,17 +417,26 @@ pub fn get_whirlpool_input_tokens_deltas(
     upper_sqrt_price: u128,
     lower_sqrt_price: u128,
 ) -> Result<(u64, u64)> {
+    let transform_whirlpool_error = |err: WhirlpoolsErrorCode| match err {
+        WhirlpoolsErrorCode::MultiplicationOverflow => SurfError::MultiplicationOverflow,
+        WhirlpoolsErrorCode::NumberDownCastError => SurfError::NumberDownCastError,
+        WhirlpoolsErrorCode::TokenMaxExceeded => SurfError::TokenMaxExceeded,
+        WhirlpoolsErrorCode::MultiplicationShiftRightOverflow => {
+            SurfError::MultiplicationShiftRightOverflow
+        }
+        _ => unreachable!(),
+    };
+
     let base_token_amount =
         get_amount_delta_a(current_sqrt_price, upper_sqrt_price, liquidity_input, true);
     let quote_token_amount =
         get_amount_delta_b(lower_sqrt_price, current_sqrt_price, liquidity_input, true);
 
-    // TODO: Handle errors
     if let Err(err) = base_token_amount {
-        return Err(SurfError::BaseTokenOverflow.into());
+        return Err(transform_whirlpool_error(err).into());
     }
-    if let Err(_) = quote_token_amount {
-        return Err(SurfError::BaseTokenOverflow.into());
+    if let Err(err) = quote_token_amount {
+        return Err(transform_whirlpool_error(err).into());
     }
 
     Ok((base_token_amount.unwrap(), quote_token_amount.unwrap()))

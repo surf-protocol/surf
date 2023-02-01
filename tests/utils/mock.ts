@@ -111,8 +111,6 @@ export const mockVaultWhirlpoolPosition = async (vault: PublicKey, whirlpool: Pu
 	const ix = await buildOpenWhirlpoolPositionIx(program, {
 		args: {
 			positionBump: whirlpoolPositionBump,
-			tickLowerIndex: 0,
-			tickUpperIndex: 1,
 		},
 		accounts: {
 			payer: wallet.publicKey,

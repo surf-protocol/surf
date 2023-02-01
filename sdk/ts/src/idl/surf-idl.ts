@@ -191,14 +191,6 @@ export type SurfIDL = {
 					name: 'positionBump'
 					type: 'u8'
 				},
-				{
-					name: 'tickLowerIndex'
-					type: 'i32'
-				},
-				{
-					name: 'tickUpperIndex'
-					type: 'i32'
-				},
 			]
 		},
 		{
@@ -572,33 +564,51 @@ export type SurfIDL = {
 		},
 		{
 			code: 6008
-			name: 'InvalidTickIndexes'
-			msg: 'Lower tick index must be lower than upper tick index'
-		},
-		{
-			code: 6009
 			name: 'InvalidProvidedTickRange'
 			msg: 'Provided tick range does not correspond to vault preset'
 		},
 		{
-			code: 6010
+			code: 6009
 			name: 'CurrentTickIndexShiftedFromMidRange'
 			msg: 'Current tick index is shifted too many ticks from middle of full tick range'
 		},
 		{
+			code: 6010
+			name: 'LowerTickIndexOutOfBounds'
+			msg: 'Lower tick index is lower than -443636'
+		},
+		{
 			code: 6011
-			name: 'TickIndexOverflow'
-			msg: 'Tick index is either lower than -443636 or higher than 443636'
+			name: 'UpperTickIndexOutOfBounds'
+			msg: 'Upper tick index is higher than 443636'
 		},
 		{
 			code: 6012
+			name: 'BaseTokenOverflow'
+			msg: 'Input quote amount is too high'
+		},
+		{
+			code: 6013
+			name: 'TokenMaxExceeded'
+			msg: 'Exceeded token max'
+		},
+		{
+			code: 6014
 			name: 'NumberDownCastError'
 			msg: 'Unable to down cast number'
 		},
 		{
-			code: 6013
-			name: 'BaseTokenOverflow'
-			msg: 'Input quote amount is too high'
+			code: 6015
+			name: 'MultiplicationOverflow'
+			msg: 'Multiplication overflow'
+		},
+		{
+			code: 6016
+			name: 'MultiplicationShiftRightOverflow'
+			msg: 'Multiplication with shift right overflow'
 		},
 	]
+	metadata: {
+		address: '4wVrbfSHxmhevzPzNfdpmVkJ2jqNRy6RYt4TxcHsnfSo'
+	}
 }

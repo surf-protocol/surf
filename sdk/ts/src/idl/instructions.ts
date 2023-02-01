@@ -93,8 +93,6 @@ export type OpenWhirlpoolPositionIxAccounts = {
 
 export type OpenWhirlpoolPositionIxArgs = {
 	positionBump: number
-	tickLowerIndex: number
-	tickUpperIndex: number
 }
 
 export type OpenWhirlpoolPositionIxParams = {
@@ -106,8 +104,6 @@ export const buildOpenWhirlpoolPositionIx = async (program: Program<SurfIDL>, { 
 	const ix = await program.methods
 		.openWhirlpoolPosition(
 			args.positionBump,
-			args.tickLowerIndex,
-			args.tickUpperIndex,
 		)
 		.accountsStrict(accounts)
 		.instruction()

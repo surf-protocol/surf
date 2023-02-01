@@ -24,19 +24,27 @@ pub enum SurfError {
     #[msg("Could not deserialize drift_account_stats")]
     InvalidDriftAccountStatsAccount,
 
-    #[msg("Lower tick index must be lower than upper tick index")]
-    InvalidTickIndexes,
     #[msg("Provided tick range does not correspond to vault preset")]
     InvalidProvidedTickRange,
     #[msg("Current tick index is shifted too many ticks from middle of full tick range")]
     CurrentTickIndexShiftedFromMidRange,
 
-    #[msg("Tick index is either lower than -443636 or higher than 443636")]
-    TickIndexOverflow,
-
-    #[msg("Unable to down cast number")]
-    NumberDownCastError,
+    #[msg("Lower tick index is lower than -443636")]
+    LowerTickIndexOutOfBounds,
+    #[msg("Upper tick index is higher than 443636")]
+    UpperTickIndexOutOfBounds,
 
     #[msg("Input quote amount is too high")]
     BaseTokenOverflow,
+
+    // Whirlpool errors
+    // https://github.com/orca-so/whirlpools/blob/main/programs/whirlpool/src/errors.rs
+    #[msg("Exceeded token max")]
+    TokenMaxExceeded,
+    #[msg("Unable to down cast number")]
+    NumberDownCastError,
+    #[msg("Multiplication overflow")]
+    MultiplicationOverflow,
+    #[msg("Multiplication with shift right overflow")]
+    MultiplicationShiftRightOverflow,
 }

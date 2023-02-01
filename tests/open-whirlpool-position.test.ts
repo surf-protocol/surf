@@ -3,6 +3,7 @@ import { ASSOCIATED_TOKEN_PROGRAM_ID, TOKEN_PROGRAM_ID } from '@solana/spl-token
 import { PublicKey, SystemProgram, SYSVAR_RENT_PUBKEY } from '@solana/web3.js'
 import { beforeAll, describe, expect, it } from 'vitest'
 
+import { buildOpenWhirlpoolPositionIx } from '../sdk/ts/src/idl/instructions.js'
 import { parseVaultAccount } from '../sdk/ts/src/idl/state-accounts.js'
 import { getVaultWhirlpoolPositionAccountsAddresses } from '../sdk/ts/src/pda.js'
 import { initDrift } from './utils/cpi/drift.js'
@@ -42,9 +43,11 @@ describe('open_whirlpool_position', async () => {
 			whirlpoolPositionBump,
 		} = getVaultWhirlpoolPositionAccountsAddresses(vaultPDA)
 
-		const openPositionIx = await program.methods
-			.openWhirlpoolPosition(whirlpoolPositionBump, lowerTickIndex, upperTickIndex)
-			.accountsStrict({
+		const openPositionIx = await buildOpenWhirlpoolPositionIx(program, {
+			args: {
+				positionBump: whirlpoolPositionBump,
+			},
+			accounts: {
 				whirlpool: whirlpoolKey,
 				payer: wallet.publicKey,
 				vault: vaultPDA,
@@ -56,8 +59,8 @@ describe('open_whirlpool_position', async () => {
 				associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
 				systemProgram: SystemProgram.programId,
 				rent: SYSVAR_RENT_PUBKEY,
-			})
-			.instruction()
+			},
+		})
 
 		await buildAndSendTx(connection, [wallet, whirlpoolPositionMintKeyPair], [openPositionIx])
 

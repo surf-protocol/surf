@@ -29,10 +29,8 @@ pub mod surf {
     pub fn open_whirlpool_position(
         ctx: Context<OpenWhirlpoolPosition>,
         position_bump: u8,
-        tick_lower_index: i32,
-        tick_upper_index: i32,
     ) -> Result<()> {
-        open_whirlpool_position::handler(ctx, position_bump, tick_lower_index, tick_upper_index)
+        open_whirlpool_position::handler(ctx, position_bump)
     }
 
     pub fn deposit(ctx: Context<Deposit>, input_quote_amount: u64) -> Result<()> {
