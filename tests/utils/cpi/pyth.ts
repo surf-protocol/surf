@@ -1,5 +1,4 @@
 import { Keypair, PublicKey, SystemProgram } from '@solana/web3.js'
-// import { parsePriceData } from '@pythnetwork/client'
 import { Program } from '@coral-xyz/anchor'
 import { expect } from 'vitest'
 import BN from 'bn.js'

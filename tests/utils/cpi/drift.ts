@@ -8,13 +8,13 @@ import {
 	getSpotMarketPublicKey,
 	getSpotMarketVaultPublicKey,
 } from '@drift-labs/sdk'
-import { Keypair, PublicKey } from '@solana/web3.js'
+import { Keypair, LAMPORTS_PER_SOL, PublicKey } from '@solana/web3.js'
 import { Program } from '@coral-xyz/anchor'
 import BN from 'bn.js'
 
 import { mockOracle } from './pyth.js'
-import { connection, provider } from '../load-config.js'
-import { baseTokenMint, quoteMintKeyPair } from '../mint.js'
+import { connection, provider, wallet } from '../load-config.js'
+import { baseTokenATA, baseTokenMint, quoteMintKeyPair } from '../mint.js'
 import { DriftIdl } from './drift-idl.js'
 import { DRIFT_PROGRAM_ID_MAINNET } from '../../../sdk/ts/src/constants.js'
 
@@ -101,7 +101,7 @@ const initializeBaseSpotMarket = async () => {
 	} catch {}
 }
 
-export const initDrift = async () => {
+export const mockDrift = async () => {
 	await mockOracle(baseTokenOracleMint, 20)
 
 	// Init state
@@ -147,6 +147,8 @@ export const initDrift = async () => {
 			return [driftSpotMarketPDA, driftSpotMarketVaultPDA]
 		}),
 	)
+
+	await adminClient.initializeUserAccountAndDepositCollateral(new BN(1000 * LAMPORTS_PER_SOL), baseTokenATA, 1, 0)
 
 	return {
 		driftBaseSpotMarketPDA,

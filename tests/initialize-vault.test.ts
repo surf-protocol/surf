@@ -8,7 +8,7 @@ import { wallet, connection, program } from './utils/load-config.js'
 import { initWhirlpool } from './utils/cpi/whirlpool.js'
 import { buildAndSendTx } from './utils/transaction.js'
 import { baseTokenMint, quoteTokenMint } from './utils/mint.js'
-import { initDrift, driftStateKey, driftProgram } from './utils/cpi/drift.js'
+import { mockDrift, driftStateKey, driftProgram } from './utils/cpi/drift.js'
 import {
 	getVaultProgramAddress,
 	getVaultTokenAccountsAddresses,
@@ -24,7 +24,7 @@ describe('initialize_vault', async () => {
 
 	beforeAll(async () => {
 		adminConfigPDA = await mockAdminConfig()
-		await initDrift()
+		await mockDrift()
 	})
 
 	it('successfully initializes vault', async () => {

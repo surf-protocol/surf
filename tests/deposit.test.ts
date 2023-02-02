@@ -13,7 +13,7 @@ import {
 import { connection, program, wallet } from './utils/load-config.js'
 import { baseTokenATA, quoteTokenATA } from './utils/mint.js'
 import { buildAndSendTx } from './utils/transaction.js'
-import { initDrift, driftStateKey, driftOracle, driftSignerKey } from './utils/cpi/drift.js'
+import { mockDrift, driftStateKey, driftOracle, driftSignerKey } from './utils/cpi/drift.js'
 import { mockAdminConfig, mockVault, mockVaultWhirlpoolPosition } from './utils/mock.js'
 import { getVaultDriftAccountsAddresses } from '../sdk/ts/src/pda.js'
 import { buildDepositIx } from '../sdk/ts/src/idl/instructions.js'
@@ -33,7 +33,7 @@ describe.only('deposit', async () => {
 			driftBaseSpotMarketPDA,
 			driftQuoteSpotMarketPDA,
 			driftBaseSpotMarketVaultPDA,
-		} = await initDrift())
+		} = await mockDrift())
 	})
 
 	it('successfully deposits', async () => {

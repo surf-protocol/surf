@@ -6,7 +6,7 @@ import { beforeAll, describe, expect, it } from 'vitest'
 import { buildOpenWhirlpoolPositionIx } from '../sdk/ts/src/idl/instructions.js'
 import { parseVaultAccount } from '../sdk/ts/src/idl/state-accounts.js'
 import { getVaultWhirlpoolPositionAccountsAddresses } from '../sdk/ts/src/pda.js'
-import { initDrift } from './utils/cpi/drift.js'
+import { mockDrift } from './utils/cpi/drift.js'
 import { DEFAULT_TICK_INDEX, initWhirlpool, DEFAULT_TICK_SPACING } from './utils/cpi/whirlpool.js'
 import { connection, program, wallet } from './utils/load-config.js'
 import { mockAdminConfig, mockVault } from './utils/mock.js'
@@ -17,7 +17,7 @@ describe('open_whirlpool_position', async () => {
 
 	beforeAll(async () => {
 		adminConfigPDA = await mockAdminConfig()
-		await initDrift()
+		await mockDrift()
 	})
 
 	it('successfully opens position', async () => {

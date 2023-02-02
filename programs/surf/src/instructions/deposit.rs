@@ -395,8 +395,6 @@ impl<'info> Deposit<'info> {
         &'a self,
         signer_seeds: &'a [&[&[u8]]],
     ) -> CpiContext<'_, '_, '_, 'info, DriftWithdraw<'info>> {
-        msg!("ORACLE - {}", self.drift_base_token_oracle.key());
-        msg!("BASE - {}", self.drift_base_spot_market.key());
         let withdraw_accounts = DriftWithdraw {
             state: self.drift_state.to_account_info(),
             drift_signer: self.drift_signer.to_account_info(),
@@ -413,6 +411,7 @@ impl<'info> Deposit<'info> {
             remaining_accounts: vec![
                 self.drift_base_token_oracle.to_account_info(),
                 self.drift_base_spot_market.to_account_info(),
+                self.drift_quote_spot_market.to_account_info(),
             ],
             signer_seeds,
         }
