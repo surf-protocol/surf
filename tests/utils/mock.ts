@@ -128,7 +128,7 @@ export const mockVaultWhirlpoolPosition = async (vault: PublicKey, whirlpool: Pu
 		},
 	})
 
-	await buildAndSendTx(connection, [wallet, whirlpoolPositionMintKeyPair], [ix], true)
+	await buildAndSendTx(connection, [wallet, whirlpoolPositionMintKeyPair], [ix])
 
 	return {
 		whirlpoolPositionMintKeyPair,

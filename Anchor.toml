@@ -3,7 +3,6 @@ seeds = false
 skip-lint = false
 [programs.localnet]
 surf = "4wVrbfSHxmhevzPzNfdpmVkJ2jqNRy6RYt4TxcHsnfSo"
-pyth = "7SueGc5Y5CPE26SMJ3jPNP5fJaaQTE4aE8LctXawz476"
 
 [registry]
 url = "https://api.apr.dev"
@@ -22,3 +21,7 @@ program = "./cpi-programs/drift.so"
 [[test.genesis]]
 address = "whirLbMiicVdio4qvUfM5KAg6Ct8VwpYzGff3uctyCc"
 program = "./cpi-programs/whirlpool.so"
+
+[[test.genesis]]
+address = "FsJ3A3u2vn5cTVofAjvy6y5kwABJAqYWpe4975bi2epH"
+program = "./cpi-programs/pyth.so"

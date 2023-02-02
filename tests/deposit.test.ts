@@ -19,7 +19,7 @@ import { getVaultDriftAccountsAddresses } from '../sdk/ts/src/pda.js'
 import { buildDepositIx } from '../sdk/ts/src/idl/instructions.js'
 import { DRIFT_PROGRAM_ID_MAINNET } from '../sdk/ts/src/constants.js'
 
-describe.skip('deposit', async () => {
+describe.only('deposit', async () => {
 	let adminConfigPDA: PublicKey
 	let driftQuoteSpotMarketVaultPDA: PublicKey
 	let driftBaseSpotMarketPDA: PublicKey

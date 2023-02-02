@@ -7,6 +7,7 @@ use drift::{
     },
     program::Drift,
     state::{
+        spot_market::SpotMarket as DriftSpotMarket,
         state::State as DriftState,
         user::{User as DriftUser, UserStats as DriftUserStats},
     },
@@ -130,6 +131,8 @@ pub fn handler(ctx: Context<Deposit>, max_input_quote_amount: u64) -> Result<()>
 
     // -------
     // DEPOSIT TO WHIRLPOOL
+    msg!("Increase liquidity base - {}", real_base_input);
+    msg!("Increase liquidity quote - {}", real_quote_input);
     let increase_liquidity_context = ctx.accounts.get_whirlpool_increase_liquidity_context();
     whirlpool_cpi::increase_liquidity(
         increase_liquidity_context.with_signer(&[&[
@@ -154,6 +157,8 @@ pub fn handler(ctx: Context<Deposit>, max_input_quote_amount: u64) -> Result<()>
         whirlpool_key.as_ref(),
         &[ctx.accounts.vault.bump],
     ]];
+
+    msg!("Deposit collateral - {}", drift_collateral_quote_amount);
     let drift_deposit_context = ctx.accounts.get_drift_deposit_context(drift_signer_seeds);
     drift_cpi::deposit(
         drift_deposit_context,
@@ -163,6 +168,7 @@ pub fn handler(ctx: Context<Deposit>, max_input_quote_amount: u64) -> Result<()>
     )?;
 
     // Withdraw from drift
+    msg!("Borrow - {}", real_base_input);
     let drift_withdraw_context = ctx.accounts.get_drift_withdraw_context(drift_signer_seeds);
     drift_cpi::withdraw(drift_withdraw_context, 1, real_base_input, false)?;
 
@@ -297,10 +303,10 @@ pub struct Deposit<'info> {
     pub drift_base_token_oracle: UncheckedAccount<'info>,
     /// CHECK: Drift program checks these accounts
     #[account(mut)]
-    pub drift_base_spot_market: UncheckedAccount<'info>,
+    pub drift_base_spot_market: AccountLoader<'info, DriftSpotMarket>,
     /// CHECK: Drift program checks these accounts
     #[account(mut)]
-    pub drift_quote_spot_market: UncheckedAccount<'info>,
+    pub drift_quote_spot_market: AccountLoader<'info, DriftSpotMarket>,
 
     #[account(mut,
         address = vault.drift_stats.key(),
@@ -378,8 +384,8 @@ impl<'info> Deposit<'info> {
             program: self.drift_program.to_account_info(),
             accounts: deposit_accounts,
             remaining_accounts: vec![
-                self.drift_quote_spot_market.to_account_info(),
                 self.drift_base_token_oracle.to_account_info(),
+                self.drift_quote_spot_market.to_account_info(),
             ],
             signer_seeds,
         }
@@ -389,6 +395,8 @@ impl<'info> Deposit<'info> {
         &'a self,
         signer_seeds: &'a [&[&[u8]]],
     ) -> CpiContext<'_, '_, '_, 'info, DriftWithdraw<'info>> {
+        msg!("ORACLE - {}", self.drift_base_token_oracle.key());
+        msg!("BASE - {}", self.drift_base_spot_market.key());
         let withdraw_accounts = DriftWithdraw {
             state: self.drift_state.to_account_info(),
             drift_signer: self.drift_signer.to_account_info(),
@@ -403,8 +411,8 @@ impl<'info> Deposit<'info> {
             program: self.drift_program.to_account_info(),
             accounts: withdraw_accounts,
             remaining_accounts: vec![
-                self.drift_base_spot_market.to_account_info(),
                 self.drift_base_token_oracle.to_account_info(),
+                self.drift_base_spot_market.to_account_info(),
             ],
             signer_seeds,
         }
