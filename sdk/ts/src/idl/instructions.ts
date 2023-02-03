@@ -111,6 +111,58 @@ export const buildOpenWhirlpoolPositionIx = async (
 }
 
 // ----------
+// depositLiquidity
+// ----------
+
+export type DepositLiquidityIxAccounts = {
+	payer: PublicKey
+	payerBaseTokenAccount: PublicKey
+	payerQuoteTokenAccount: PublicKey
+	vault: PublicKey
+	vaultBaseTokenAccount: PublicKey
+	vaultQuoteTokenAccount: PublicKey
+	userPosition: PublicKey
+	prepareSwapWhirlpool: PublicKey
+	prepareSwapWhirlpoolBaseTokenVault: PublicKey
+	prepareSwapWhirlpoolQuoteTokenVault: PublicKey
+	prepareSwapTickArray0: PublicKey
+	prepareSwapTickArray1: PublicKey
+	prepareSwapTickArray2: PublicKey
+	prepareSwapOracle: PublicKey
+	whirlpoolPosition: PublicKey
+	whirlpoolPositionTokenAccount: PublicKey
+	whirlpoolPositionTickArrayLower: PublicKey
+	whirlpoolPositionTickArrayUpper: PublicKey
+	whirlpool: PublicKey
+	whirlpoolBaseTokenVault: PublicKey
+	whirlpoolQuoteTokenVault: PublicKey
+	whirlpoolProgram: PublicKey
+	tokenProgram: PublicKey
+	systemProgram: PublicKey
+}
+
+export type DepositLiquidityIxArgs = {
+	whirlpoolDepositQuoteAmount: BN
+	whirlpoolDepositQuoteAmountMax: BN
+}
+
+export type DepositLiquidityIxParams = {
+	accounts: DepositLiquidityIxAccounts
+	args: DepositLiquidityIxArgs
+}
+
+export const buildDepositLiquidityIx = async (
+	program: Program<SurfIDL>,
+	{ accounts, args }: DepositLiquidityIxParams,
+) => {
+	const ix = await program.methods
+		.depositLiquidity(args.whirlpoolDepositQuoteAmount, args.whirlpoolDepositQuoteAmountMax)
+		.accountsStrict(accounts)
+		.instruction()
+	return ix
+}
+
+// ----------
 // deposit
 // ----------
 
@@ -145,6 +197,7 @@ export type DepositIxAccounts = {
 	driftQuoteSpotMarket: PublicKey
 	driftStats: PublicKey
 	driftSubaccount: PublicKey
+	hedgeSwapWhirlpool: PublicKey
 	whirlpoolProgram: PublicKey
 	driftProgram: PublicKey
 	tokenProgram: PublicKey

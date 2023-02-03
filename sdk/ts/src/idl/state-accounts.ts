@@ -25,6 +25,7 @@ export type UserPositionAccount = {
 	bump: number
 	vault: PublicKey
 	liquidity: BN
+	isHedged: boolean
 	feeGrowthCheckpointBaseToken: BN
 	feeGrowthCheckpointQuoteToken: BN
 	feeUnclaimedBaseToken: BN

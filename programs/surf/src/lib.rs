@@ -33,6 +33,18 @@ pub mod surf {
         open_whirlpool_position::handler(ctx, position_bump)
     }
 
+    pub fn deposit_liquidity(
+        ctx: Context<DepositLiquidity>,
+        whirlpool_deposit_quote_amount: u64,
+        whirlpool_deposit_quote_amount_max: u64,
+    ) -> Result<()> {
+        deposit_liquidity::handler(
+            ctx,
+            whirlpool_deposit_quote_amount,
+            whirlpool_deposit_quote_amount_max,
+        )
+    }
+
     pub fn deposit(ctx: Context<Deposit>, input_quote_amount: u64) -> Result<()> {
         deposit::handler(ctx, input_quote_amount)
     }

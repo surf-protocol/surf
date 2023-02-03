@@ -37,6 +37,12 @@ pub enum SurfError {
     #[msg("Input quote amount is too high")]
     BaseTokenOverflow,
 
+    #[msg("Deposit amount is higher than max amount allowed")]
+    SlippageExceeded,
+
+    #[msg("Token mints of whirlpools are not matching")]
+    WhirlpoolMintsNotMatching,
+
     // Whirlpool errors
     // https://github.com/orca-so/whirlpools/blob/main/programs/whirlpool/src/errors.rs
     #[msg("Exceeded token max")]

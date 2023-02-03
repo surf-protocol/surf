@@ -22,6 +22,7 @@ use whirlpools_client::{
     errors::ErrorCode as WhirlpoolsErrorCode,
     math::{
         get_amount_delta_a, get_amount_delta_b, sqrt_price_from_tick_index, MAX_SQRT_PRICE_X64,
+        MIN_SQRT_PRICE_X64,
     },
 };
 
@@ -102,6 +103,8 @@ pub fn handler(ctx: Context<Deposit>, max_input_quote_amount: u64) -> Result<()>
         }
     }
 
+    // TODO: Drift deposit can not be less than 99% of whirlpool deposit to maintain healthy drift account
+
     // -------
     // TRANSFER TO VAULT ACCOUNTS
     let token_program = &ctx.accounts.token_program;
@@ -173,6 +176,27 @@ pub fn handler(ctx: Context<Deposit>, max_input_quote_amount: u64) -> Result<()>
     drift_cpi::withdraw(drift_withdraw_context, 1, real_base_input, false)?;
 
     // Swap withdrawn SOL from drift
+    if ctx
+        .accounts
+        .whirlpool
+        .key()
+        .eq(&ctx.accounts.prepare_swap_whirlpool.key())
+    {
+        ctx.accounts.prepare_swap_whirlpool.reload()?;
+    }
+
+    msg!("Hedge swap - {}", real_base_input);
+    // TODO: check what is start tick array
+    // since there are 3 tick array up and 3 tick arrays down it is possible to do everything automatically
+    // let hedge_swap_context = ctx.accounts.get_hedge_swap_context();
+    // whirlpool_cpi::swap(
+    //     hedge_swap_context,
+    //     real_base_input,
+    //     0,
+    //     MIN_SQRT_PRICE_X64,
+    //     true,
+    //     true,
+    // )?;
 
     Ok(())
 }
@@ -260,7 +284,7 @@ pub struct Deposit<'info> {
         associated_token::mint = whirlpool_position.position_mint,
         associated_token::authority = vault,
     )]
-    pub whirlpool_position_token_account: Account<'info, TokenAccount>,
+    pub whirlpool_position_token_account: Box<Account<'info, TokenAccount>>,
 
     // Whirlpool program performs checks
     #[account(mut)]
@@ -317,6 +341,38 @@ pub struct Deposit<'info> {
     )]
     pub drift_subaccount: AccountLoader<'info, DriftUser>,
 
+    // ----------------
+    // Hedge swap accounts
+    pub hedge_swap_whirlpool: Account<'info, Whirlpool>,
+
+    // #[account(mut, address = hedge_swap_whirlpool.token_vault_a)]
+    // pub hedge_swap_whirlpool_base_token_vault: Box<Account<'info, TokenAccount>>,
+    // #[account(mut, address = hedge_swap_whirlpool.token_vault_b)]
+    // pub hedge_swap_whirlpool_quote_token_vault: Box<Account<'info, TokenAccount>>,
+
+    // #[account(mut,
+    //     constraint = hedge_swap_tick_array_0.load()?.whirlpool.key().eq(&hedge_swap_whirlpool.key())
+    // )]
+    // pub hedge_swap_tick_array_0: AccountLoader<'info, TickArray>,
+    // #[account(mut,
+    //     constraint = hedge_swap_tick_array_1.load()?.whirlpool.key().eq(&hedge_swap_whirlpool.key())
+    // )]
+    // pub hedge_swap_tick_array_1: AccountLoader<'info, TickArray>,
+    // #[account(mut,
+    //     constraint = hedge_swap_tick_array_2.load()?.whirlpool.key().eq(&hedge_swap_whirlpool.key())
+    // )]
+    // pub hedge_swap_tick_array_2: AccountLoader<'info, TickArray>,
+
+    // /// CHECK: Unused in whirlpools
+    // #[account(
+    //     seeds = [
+    //         b"oracle".as_ref(),
+    //         hedge_swap_whirlpool.key().as_ref()
+    //     ],
+    //     bump,
+    //     seeds::program = whirlpool_program.key()
+    // )]
+    // pub hedge_swap_oracle: UncheckedAccount<'info>,
     pub whirlpool_program: Program<'info, WhirlpoolProgram>,
     pub drift_program: Program<'info, Drift>,
     pub token_program: Program<'info, Token>,
@@ -416,6 +472,25 @@ impl<'info> Deposit<'info> {
             signer_seeds,
         }
     }
+
+    // pub fn get_hedge_swap_context(&self) -> CpiContext<'_, '_, '_, 'info, Swap<'info>> {
+    //     let swap_accounts = Swap {
+    //         token_authority: self.vault.to_account_info(),
+    //         whirlpool: self.hedge_swap_whirlpool.to_account_info(),
+    //         token_owner_account_a: self.vault_base_token_account.to_account_info(),
+    //         token_owner_account_b: self.vault_quote_token_account.to_account_info(),
+    //         token_vault_a: self.hedge_swap_whirlpool_base_token_vault.to_account_info(),
+    //         token_vault_b: self
+    //             .hedge_swap_whirlpool_quote_token_vault
+    //             .to_account_info(),
+    //         tick_array0: self.hedge_swap_tick_array_0.to_account_info(),
+    //         tick_array1: self.hedge_swap_tick_array_1.to_account_info(),
+    //         tick_array2: self.hedge_swap_tick_array_2.to_account_info(),
+    //         token_program: self.token_program.to_account_info(),
+    //         oracle: self.hedge_swap_oracle.to_account_info(),
+    //     };
+    //     CpiContext::new(self.whirlpool_program.to_account_info(), swap_accounts)
+    // }
 }
 
 pub fn get_whirlpool_input_tokens_deltas(

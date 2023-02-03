@@ -194,6 +194,141 @@ export type SurfIDL = {
 			]
 		},
 		{
+			name: 'depositLiquidity'
+			accounts: [
+				{
+					name: 'payer'
+					isMut: true
+					isSigner: true
+				},
+				{
+					name: 'payerBaseTokenAccount'
+					isMut: true
+					isSigner: false
+				},
+				{
+					name: 'payerQuoteTokenAccount'
+					isMut: true
+					isSigner: false
+				},
+				{
+					name: 'vault'
+					isMut: true
+					isSigner: false
+				},
+				{
+					name: 'vaultBaseTokenAccount'
+					isMut: true
+					isSigner: false
+				},
+				{
+					name: 'vaultQuoteTokenAccount'
+					isMut: true
+					isSigner: false
+				},
+				{
+					name: 'userPosition'
+					isMut: true
+					isSigner: false
+				},
+				{
+					name: 'prepareSwapWhirlpool'
+					isMut: true
+					isSigner: false
+				},
+				{
+					name: 'prepareSwapWhirlpoolBaseTokenVault'
+					isMut: true
+					isSigner: false
+				},
+				{
+					name: 'prepareSwapWhirlpoolQuoteTokenVault'
+					isMut: true
+					isSigner: false
+				},
+				{
+					name: 'prepareSwapTickArray0'
+					isMut: true
+					isSigner: false
+				},
+				{
+					name: 'prepareSwapTickArray1'
+					isMut: true
+					isSigner: false
+				},
+				{
+					name: 'prepareSwapTickArray2'
+					isMut: true
+					isSigner: false
+				},
+				{
+					name: 'prepareSwapOracle'
+					isMut: false
+					isSigner: false
+				},
+				{
+					name: 'whirlpoolPosition'
+					isMut: true
+					isSigner: false
+				},
+				{
+					name: 'whirlpoolPositionTokenAccount'
+					isMut: true
+					isSigner: false
+				},
+				{
+					name: 'whirlpoolPositionTickArrayLower'
+					isMut: true
+					isSigner: false
+				},
+				{
+					name: 'whirlpoolPositionTickArrayUpper'
+					isMut: true
+					isSigner: false
+				},
+				{
+					name: 'whirlpool'
+					isMut: true
+					isSigner: false
+				},
+				{
+					name: 'whirlpoolBaseTokenVault'
+					isMut: true
+					isSigner: false
+				},
+				{
+					name: 'whirlpoolQuoteTokenVault'
+					isMut: true
+					isSigner: false
+				},
+				{
+					name: 'whirlpoolProgram'
+					isMut: false
+					isSigner: false
+				},
+				{
+					name: 'tokenProgram'
+					isMut: false
+					isSigner: false
+				},
+				{
+					name: 'systemProgram'
+					isMut: false
+					isSigner: false
+				},
+			]
+			args: [
+				{
+					name: 'whirlpoolDepositQuoteAmount'
+					type: 'u64'
+				},
+				{
+					name: 'whirlpoolDepositQuoteAmountMax'
+					type: 'u64'
+				},
+			]
+		},
+		{
 			name: 'deposit'
 			accounts: [
 				{
@@ -347,6 +482,11 @@ export type SurfIDL = {
 					isSigner: false
 				},
 				{
+					name: 'hedgeSwapWhirlpool'
+					isMut: false
+					isSigner: false
+				},
+				{
 					name: 'whirlpoolProgram'
 					isMut: false
 					isSigner: false
@@ -408,6 +548,10 @@ export type SurfIDL = {
 					{
 						name: 'liquidity'
 						type: 'u128'
+					},
+					{
+						name: 'isHedged'
+						type: 'bool'
 					},
 					{
 						name: 'feeGrowthCheckpointBaseToken'
@@ -589,26 +733,33 @@ export type SurfIDL = {
 		},
 		{
 			code: 6013
+			name: 'SlippageExceeded'
+			msg: 'Deposit amount is higher than max amount allowed'
+		},
+		{
+			code: 6014
+			name: 'WhirlpoolMintsNotMatching'
+			msg: 'Token mints of whirlpools are not matching'
+		},
+		{
+			code: 6015
 			name: 'TokenMaxExceeded'
 			msg: 'Exceeded token max'
 		},
 		{
-			code: 6014
+			code: 6016
 			name: 'NumberDownCastError'
 			msg: 'Unable to down cast number'
 		},
 		{
-			code: 6015
+			code: 6017
 			name: 'MultiplicationOverflow'
 			msg: 'Multiplication overflow'
 		},
 		{
-			code: 6016
+			code: 6018
 			name: 'MultiplicationShiftRightOverflow'
 			msg: 'Multiplication with shift right overflow'
 		},
 	]
-	metadata: {
-		address: '4wVrbfSHxmhevzPzNfdpmVkJ2jqNRy6RYt4TxcHsnfSo'
-	}
 }

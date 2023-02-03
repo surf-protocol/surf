@@ -8,6 +8,7 @@ pub struct UserPosition {
     pub vault: Pubkey, // 32
 
     pub liquidity: u128, // 16
+    pub is_hedged: bool, // 1
 
     pub fee_growth_checkpoint_base_token: u128,  // 16
     pub fee_growth_checkpoint_quote_token: u128, // 16
@@ -29,7 +30,9 @@ impl UserPosition {
     ) -> () {
         self.bump = bump;
         self.vault = vault_key;
+
         self.liquidity = liquidity;
+        self.is_hedged = false;
 
         self.fee_growth_checkpoint_base_token = current_fee_growth_base_token;
         self.fee_growth_checkpoint_quote_token = current_fee_growth_quote_token;

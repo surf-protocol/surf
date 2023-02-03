@@ -1,42 +1,32 @@
-import { ORCA_WHIRLPOOL_PROGRAM_ID, TickUtil } from '@orca-so/whirlpools-sdk'
 import { ComputeBudgetProgram, PublicKey, SystemProgram } from '@solana/web3.js'
-import { TOKEN_PROGRAM_ID } from '@solana/spl-token'
 import { beforeAll, describe, it } from 'vitest'
+import { TOKEN_PROGRAM_ID } from '@solana/spl-token'
+import { ORCA_WHIRLPOOL_PROGRAM_ID, TickUtil } from '@orca-so/whirlpools-sdk'
 import BN from 'bn.js'
 
+import { mockAdminConfig, mockVault, mockVaultWhirlpoolPosition } from './utils/mock.js'
+import { mockDrift } from './utils/cpi/drift.js'
 import {
-	DEFAULT_TICK_SPACING,
-	fundPosition,
-	initTickArray,
 	initWhirlpool,
+	fundPosition,
+	DEFAULT_TICK_SPACING,
+	initTickArray,
 } from './utils/cpi/whirlpool.js'
+import { buildDepositLiquidityIx } from '../sdk/ts/src/idl/instructions.js'
 import { connection, program, wallet } from './utils/load-config.js'
 import { baseTokenATA, quoteTokenATA } from './utils/mint.js'
 import { buildAndSendTx } from './utils/transaction.js'
-import { mockDrift, driftStateKey, driftOracle, driftSignerKey } from './utils/cpi/drift.js'
-import { mockAdminConfig, mockVault, mockVaultWhirlpoolPosition } from './utils/mock.js'
-import { getVaultDriftAccountsAddresses } from '../sdk/ts/src/pda.js'
-import { buildDepositIx } from '../sdk/ts/src/idl/instructions.js'
-import { DRIFT_PROGRAM_ID_MAINNET } from '../sdk/ts/src/constants.js'
+import { getUserPositionAddress } from '../sdk/ts/src/pda.js'
 
-describe('deposit', async () => {
+describe.only('deposit_liquidity', async () => {
 	let adminConfigPDA: PublicKey
-	let driftQuoteSpotMarketVaultPDA: PublicKey
-	let driftBaseSpotMarketPDA: PublicKey
-	let driftQuoteSpotMarketPDA: PublicKey
-	let driftBaseSpotMarketVaultPDA: PublicKey
 
 	beforeAll(async () => {
 		adminConfigPDA = await mockAdminConfig()
-		;({
-			driftQuoteSpotMarketVaultPDA,
-			driftBaseSpotMarketPDA,
-			driftQuoteSpotMarketPDA,
-			driftBaseSpotMarketVaultPDA,
-		} = await mockDrift())
+		await mockDrift()
 	})
 
-	it('successfully deposits', async () => {
+	it('successfully depsits', async () => {
 		const { whirlpoolKey, whirlpoolData, tickArrays, oracleKey } = await initWhirlpool()
 		await fundPosition(new BN(10000 * 10 ** 6), whirlpoolKey, whirlpoolData, tickArrays)
 
@@ -53,7 +43,6 @@ describe('deposit', async () => {
 			},
 		)
 
-		const { driftStats, driftSubaccount } = getVaultDriftAccountsAddresses(vaultPDA)
 		const { whirlpoolPositionPDA, whirlpoolPositionVaultTokenAccount } =
 			await mockVaultWhirlpoolPosition(vaultPDA, whirlpoolKey)
 
@@ -69,32 +58,35 @@ describe('deposit', async () => {
 			TickUtil.getInitializableTickIndex(lowerTickIndex, DEFAULT_TICK_SPACING),
 			DEFAULT_TICK_SPACING,
 		)
-		const { tickArrayPda: upperTickArrayPDA } = await initTickArray(
-			upperInitializableTickIndex,
-			whirlpoolKey,
-		)
-		const { tickArrayPda: lowerTickArrayPDA } = await initTickArray(
-			lowerInitializableTickIndex,
-			whirlpoolKey,
-		)
 
-		const ix = await buildDepositIx(program, {
+		const [{ tickArrayPda: upperTickArrayPDA }, { tickArrayPda: lowerTickArrayPDA }] =
+			await Promise.all([
+				initTickArray(upperInitializableTickIndex, whirlpoolKey),
+				initTickArray(lowerInitializableTickIndex, whirlpoolKey),
+			])
+
+		const [userPosition] = getUserPositionAddress(vaultPDA, wallet.publicKey)
+
+		const depositLiquidityIx = await buildDepositLiquidityIx(program, {
 			args: {
-				inputQuoteAmount: new BN(100 * 10 ** 6),
+				whirlpoolDepositQuoteAmount: new BN(100 * 10 ** 6),
+				whirlpoolDepositQuoteAmountMax: new BN(110 * 10 ** 6),
 			},
 			accounts: {
-				adminConfig: adminConfigPDA,
+				userPosition,
 				payer: wallet.publicKey,
+				payerBaseTokenAccount: baseTokenATA,
+				payerQuoteTokenAccount: quoteTokenATA,
+				vault: vaultPDA,
+				vaultBaseTokenAccount,
+				vaultQuoteTokenAccount,
 				prepareSwapWhirlpool: whirlpoolKey,
 				prepareSwapWhirlpoolBaseTokenVault: whirlpoolData.tokenVaultA,
 				prepareSwapWhirlpoolQuoteTokenVault: whirlpoolData.tokenVaultB,
-				payerBaseTokenAccount: baseTokenATA,
-				payerQuoteTokenAccount: quoteTokenATA,
 				prepareSwapTickArray0: tickArrays[0].publicKey,
 				prepareSwapTickArray1: tickArrays[1].publicKey,
 				prepareSwapTickArray2: tickArrays[2].publicKey,
 				prepareSwapOracle: oracleKey,
-				vault: vaultPDA,
 				whirlpoolPosition: whirlpoolPositionPDA,
 				whirlpoolPositionTokenAccount: whirlpoolPositionVaultTokenAccount,
 				whirlpoolPositionTickArrayLower: lowerTickArrayPDA.publicKey,
@@ -102,37 +94,16 @@ describe('deposit', async () => {
 				whirlpool: whirlpoolKey,
 				whirlpoolBaseTokenVault: whirlpoolData.tokenVaultA,
 				whirlpoolQuoteTokenVault: whirlpoolData.tokenVaultB,
-				driftState: driftStateKey,
-				driftBaseTokenOracle: driftOracle,
-				driftBaseSpotMarket: driftBaseSpotMarketPDA,
-				driftQuoteSpotMarket: driftQuoteSpotMarketPDA,
-				driftQuoteSpotMarketVault: driftQuoteSpotMarketVaultPDA,
-				driftBaseSpotMarketVault: driftBaseSpotMarketVaultPDA,
-				driftSigner: driftSignerKey,
-				driftStats,
-				driftSubaccount,
-				vaultBaseTokenAccount,
-				vaultQuoteTokenAccount,
-
-				hedgeSwapWhirlpool: whirlpoolKey,
-				// hedgeSwapWhirlpoolBaseTokenVault: whirlpoolData.tokenVaultA,
-				// hedgeSwapWhirlpoolQuoteTokenVault: whirlpoolData.tokenVaultB,
-				// hedgeSwapTickArray0: tickArrays[0].publicKey,
-				// hedgeSwapTickArray1: tickArrays[-1].publicKey,
-				// hedgeSwapTickArray2: tickArrays[-2].publicKey,
-				// hedgeSwapOracle: oracleKey,
-
-				driftProgram: DRIFT_PROGRAM_ID_MAINNET,
 				whirlpoolProgram: ORCA_WHIRLPOOL_PROGRAM_ID,
-				systemProgram: SystemProgram.programId,
 				tokenProgram: TOKEN_PROGRAM_ID,
+				systemProgram: SystemProgram.programId,
 			},
 		})
 
 		await buildAndSendTx(
 			connection,
 			[wallet],
-			[ComputeBudgetProgram.setComputeUnitLimit({ units: 1_400_000 }), ix],
+			[ComputeBudgetProgram.setComputeUnitLimit({ units: 1_400_000 }), depositLiquidityIx],
 			true,
 		)
 	})

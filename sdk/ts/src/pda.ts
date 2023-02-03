@@ -58,3 +58,10 @@ export const getVaultWhirlpoolPositionAccountsAddresses = (
 		whirlpoolPositionBump: bump,
 	}
 }
+
+export const getUserPositionAddress = (vaultAddress: PublicKey, ownerAddress: PublicKey) => {
+	return PublicKey.findProgramAddressSync(
+		[Buffer.from('user_position', 'utf-8'), vaultAddress.toBuffer(), ownerAddress.toBuffer()],
+		SURF_PROGRAM_ID,
+	)
+}
