@@ -163,31 +163,19 @@ export const buildDepositLiquidityIx = async (
 }
 
 // ----------
-// deposit
+// hedgeLiquidity
 // ----------
 
-export type DepositIxAccounts = {
+export type HedgeLiquidityIxAccounts = {
 	payer: PublicKey
 	payerBaseTokenAccount: PublicKey
 	payerQuoteTokenAccount: PublicKey
-	adminConfig: PublicKey
-	prepareSwapWhirlpool: PublicKey
-	prepareSwapWhirlpoolBaseTokenVault: PublicKey
-	prepareSwapWhirlpoolQuoteTokenVault: PublicKey
-	prepareSwapTickArray0: PublicKey
-	prepareSwapTickArray1: PublicKey
-	prepareSwapTickArray2: PublicKey
-	prepareSwapOracle: PublicKey
+	userPosition: PublicKey
 	vault: PublicKey
 	vaultBaseTokenAccount: PublicKey
 	vaultQuoteTokenAccount: PublicKey
-	whirlpoolPosition: PublicKey
-	whirlpoolPositionTokenAccount: PublicKey
-	whirlpoolPositionTickArrayLower: PublicKey
-	whirlpoolPositionTickArrayUpper: PublicKey
 	whirlpool: PublicKey
-	whirlpoolBaseTokenVault: PublicKey
-	whirlpoolQuoteTokenVault: PublicKey
+	whirlpoolPosition: PublicKey
 	driftState: PublicKey
 	driftSigner: PublicKey
 	driftQuoteSpotMarketVault: PublicKey
@@ -198,28 +186,25 @@ export type DepositIxAccounts = {
 	driftStats: PublicKey
 	driftSubaccount: PublicKey
 	hedgeSwapWhirlpool: PublicKey
-	whirlpoolProgram: PublicKey
+	hedgeSwapWhirlpoolBaseTokenVault: PublicKey
+	hedgeSwapWhirlpoolQuoteTokenVault: PublicKey
+	hedgeSwapTickArray0: PublicKey
+	hedgeSwapTickArray1: PublicKey
+	hedgeSwapTickArray2: PublicKey
+	hedgeSwapOracle: PublicKey
 	driftProgram: PublicKey
+	whirlpoolProgram: PublicKey
 	tokenProgram: PublicKey
-	systemProgram: PublicKey
 }
 
-export type DepositIxArgs = {
-	inputQuoteAmount: BN
+export type HedgeLiquidityIxParams = {
+	accounts: HedgeLiquidityIxAccounts
 }
 
-export type DepositIxParams = {
-	accounts: DepositIxAccounts
-	args: DepositIxArgs
-}
-
-export const buildDepositIx = async (
+export const buildHedgeLiquidityIx = async (
 	program: Program<SurfIDL>,
-	{ accounts, args }: DepositIxParams,
+	{ accounts }: HedgeLiquidityIxParams,
 ) => {
-	const ix = await program.methods
-		.deposit(args.inputQuoteAmount)
-		.accountsStrict(accounts)
-		.instruction()
+	const ix = await program.methods.hedgeLiquidity().accountsStrict(accounts).instruction()
 	return ix
 }

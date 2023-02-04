@@ -45,7 +45,7 @@ pub mod surf {
         )
     }
 
-    pub fn deposit(ctx: Context<Deposit>, input_quote_amount: u64) -> Result<()> {
-        deposit::handler(ctx, input_quote_amount)
+    pub fn hedge_liquidity(ctx: Context<HedgeLiquidity>) -> Result<()> {
+        hedge_liquidity::handler(ctx)
     }
 }

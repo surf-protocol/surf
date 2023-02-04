@@ -10,7 +10,7 @@ import {
 	initWhirlpool,
 	fundPosition,
 	DEFAULT_TICK_SPACING,
-	initTickArray,
+	initProvidedTickArrays,
 } from './utils/cpi/whirlpool.js'
 import { buildDepositLiquidityIx } from '../sdk/ts/src/idl/instructions.js'
 import { connection, program, wallet } from './utils/load-config.js'
@@ -18,7 +18,7 @@ import { baseTokenATA, quoteTokenATA } from './utils/mint.js'
 import { buildAndSendTx } from './utils/transaction.js'
 import { getUserPositionAddress } from '../sdk/ts/src/pda.js'
 
-describe.only('deposit_liquidity', async () => {
+describe('deposit_liquidity', async () => {
 	let adminConfigPDA: PublicKey
 
 	beforeAll(async () => {
@@ -59,11 +59,10 @@ describe.only('deposit_liquidity', async () => {
 			DEFAULT_TICK_SPACING,
 		)
 
-		const [{ tickArrayPda: upperTickArrayPDA }, { tickArrayPda: lowerTickArrayPDA }] =
-			await Promise.all([
-				initTickArray(upperInitializableTickIndex, whirlpoolKey),
-				initTickArray(lowerInitializableTickIndex, whirlpoolKey),
-			])
+		const [{ tickArrayPda: upperTickArrayPDA }, { tickArrayPda: lowerTickArrayPDA }] = await initProvidedTickArrays([
+			upperInitializableTickIndex,
+			lowerInitializableTickIndex,
+		], whirlpoolKey)
 
 		const [userPosition] = getUserPositionAddress(vaultPDA, wallet.publicKey)
 

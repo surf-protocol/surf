@@ -329,11 +329,11 @@ export type SurfIDL = {
 			]
 		},
 		{
-			name: 'deposit'
+			name: 'hedgeLiquidity'
 			accounts: [
 				{
 					name: 'payer'
-					isMut: true
+					isMut: false
 					isSigner: true
 				},
 				{
@@ -347,43 +347,8 @@ export type SurfIDL = {
 					isSigner: false
 				},
 				{
-					name: 'adminConfig'
-					isMut: false
-					isSigner: false
-				},
-				{
-					name: 'prepareSwapWhirlpool'
+					name: 'userPosition'
 					isMut: true
-					isSigner: false
-				},
-				{
-					name: 'prepareSwapWhirlpoolBaseTokenVault'
-					isMut: true
-					isSigner: false
-				},
-				{
-					name: 'prepareSwapWhirlpoolQuoteTokenVault'
-					isMut: true
-					isSigner: false
-				},
-				{
-					name: 'prepareSwapTickArray0'
-					isMut: true
-					isSigner: false
-				},
-				{
-					name: 'prepareSwapTickArray1'
-					isMut: true
-					isSigner: false
-				},
-				{
-					name: 'prepareSwapTickArray2'
-					isMut: true
-					isSigner: false
-				},
-				{
-					name: 'prepareSwapOracle'
-					isMut: false
 					isSigner: false
 				},
 				{
@@ -402,38 +367,13 @@ export type SurfIDL = {
 					isSigner: false
 				},
 				{
-					name: 'whirlpoolPosition'
-					isMut: true
-					isSigner: false
-				},
-				{
-					name: 'whirlpoolPositionTokenAccount'
-					isMut: true
-					isSigner: false
-				},
-				{
-					name: 'whirlpoolPositionTickArrayLower'
-					isMut: true
-					isSigner: false
-				},
-				{
-					name: 'whirlpoolPositionTickArrayUpper'
-					isMut: true
-					isSigner: false
-				},
-				{
 					name: 'whirlpool'
-					isMut: true
+					isMut: false
 					isSigner: false
 				},
 				{
-					name: 'whirlpoolBaseTokenVault'
-					isMut: true
-					isSigner: false
-				},
-				{
-					name: 'whirlpoolQuoteTokenVault'
-					isMut: true
+					name: 'whirlpoolPosition'
+					isMut: false
 					isSigner: false
 				},
 				{
@@ -483,11 +423,36 @@ export type SurfIDL = {
 				},
 				{
 					name: 'hedgeSwapWhirlpool'
-					isMut: false
+					isMut: true
 					isSigner: false
 				},
 				{
-					name: 'whirlpoolProgram'
+					name: 'hedgeSwapWhirlpoolBaseTokenVault'
+					isMut: true
+					isSigner: false
+				},
+				{
+					name: 'hedgeSwapWhirlpoolQuoteTokenVault'
+					isMut: true
+					isSigner: false
+				},
+				{
+					name: 'hedgeSwapTickArray0'
+					isMut: true
+					isSigner: false
+				},
+				{
+					name: 'hedgeSwapTickArray1'
+					isMut: true
+					isSigner: false
+				},
+				{
+					name: 'hedgeSwapTickArray2'
+					isMut: true
+					isSigner: false
+				},
+				{
+					name: 'hedgeSwapOracle'
 					isMut: false
 					isSigner: false
 				},
@@ -497,22 +462,17 @@ export type SurfIDL = {
 					isSigner: false
 				},
 				{
+					name: 'whirlpoolProgram'
+					isMut: false
+					isSigner: false
+				},
+				{
 					name: 'tokenProgram'
 					isMut: false
 					isSigner: false
 				},
-				{
-					name: 'systemProgram'
-					isMut: false
-					isSigner: false
-				},
 			]
-			args: [
-				{
-					name: 'inputQuoteAmount'
-					type: 'u64'
-				},
-			]
+			args: []
 		},
 	]
 	accounts: [
@@ -552,6 +512,14 @@ export type SurfIDL = {
 					{
 						name: 'isHedged'
 						type: 'bool'
+					},
+					{
+						name: 'collateralQuoteAmount'
+						type: 'u64'
+					},
+					{
+						name: 'borrowBaseAmount'
+						type: 'u64'
 					},
 					{
 						name: 'feeGrowthCheckpointBaseToken'
@@ -611,6 +579,10 @@ export type SurfIDL = {
 					},
 					{
 						name: 'liquidity'
+						type: 'u128'
+					},
+					{
+						name: 'hedgedLiquidity'
 						type: 'u128'
 					},
 					{
@@ -703,61 +675,56 @@ export type SurfIDL = {
 		},
 		{
 			code: 6007
-			name: 'InvalidDriftAccountStatsAccount'
-			msg: 'Could not deserialize drift_account_stats'
-		},
-		{
-			code: 6008
-			name: 'InvalidProvidedTickRange'
-			msg: 'Provided tick range does not correspond to vault preset'
-		},
-		{
-			code: 6009
-			name: 'CurrentTickIndexShiftedFromMidRange'
-			msg: 'Current tick index is shifted too many ticks from middle of full tick range'
-		},
-		{
-			code: 6010
 			name: 'LowerTickIndexOutOfBounds'
 			msg: 'Lower tick index is lower than -443636'
 		},
 		{
-			code: 6011
+			code: 6008
 			name: 'UpperTickIndexOutOfBounds'
 			msg: 'Upper tick index is higher than 443636'
 		},
 		{
-			code: 6012
-			name: 'BaseTokenOverflow'
-			msg: 'Input quote amount is too high'
-		},
-		{
-			code: 6013
+			code: 6009
 			name: 'SlippageExceeded'
 			msg: 'Deposit amount is higher than max amount allowed'
 		},
 		{
-			code: 6014
+			code: 6010
 			name: 'WhirlpoolMintsNotMatching'
 			msg: 'Token mints of whirlpools are not matching'
 		},
 		{
-			code: 6015
+			code: 6011
+			name: 'PositionNotOpen'
+			msg: 'Whirlpool position is not open'
+		},
+		{
+			code: 6012
+			name: 'PositionAlreadyHedged'
+			msg: 'User position is already hedged'
+		},
+		{
+			code: 6013
+			name: 'BaseTokenOverflow'
+			msg: 'Input quote amount is too high'
+		},
+		{
+			code: 6014
 			name: 'TokenMaxExceeded'
 			msg: 'Exceeded token max'
 		},
 		{
-			code: 6016
+			code: 6015
 			name: 'NumberDownCastError'
 			msg: 'Unable to down cast number'
 		},
 		{
-			code: 6017
+			code: 6016
 			name: 'MultiplicationOverflow'
 			msg: 'Multiplication overflow'
 		},
 		{
-			code: 6018
+			code: 6017
 			name: 'MultiplicationShiftRightOverflow'
 			msg: 'Multiplication with shift right overflow'
 		},

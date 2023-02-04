@@ -1,7 +1,7 @@
 use anchor_lang::prelude::*;
 use whirlpools::Whirlpool;
 
-use crate::{errors::SurfError, state::AdminConfig};
+use crate::state::{AdminConfig, Vault};
 
 pub fn is_admin<'info>(admin_config: &Account<'info, AdminConfig>, admin: &Signer<'info>) -> bool {
     admin_config.admin_key.eq(&admin.key())
@@ -13,4 +13,8 @@ pub fn have_matching_mints<'info>(
 ) -> bool {
     whirlpool_a.token_mint_a.eq(&whirlpool_b.token_mint_a)
         && whirlpool_b.token_mint_b.eq(&whirlpool_b.token_mint_b)
+}
+
+pub fn is_position_open<'info>(vault: &Account<'info, Vault>) -> bool {
+    vault.whirlpool_position.ne(&Pubkey::default())
 }

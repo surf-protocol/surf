@@ -26,6 +26,8 @@ export type UserPositionAccount = {
 	vault: PublicKey
 	liquidity: BN
 	isHedged: boolean
+	collateralQuoteAmount: BN
+	borrowBaseAmount: BN
 	feeGrowthCheckpointBaseToken: BN
 	feeGrowthCheckpointQuoteToken: BN
 	feeUnclaimedBaseToken: BN
@@ -54,6 +56,7 @@ export type VaultAccount = {
 	driftStats: PublicKey
 	driftSubaccount: PublicKey
 	liquidity: BN
+	hedgedLiquidity: BN
 	baseTokenTotalFeeGrowth: BN
 	quoteTokenTotalFeeGrowth: BN
 	baseTokenFeeUnclaimed: BN

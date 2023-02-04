@@ -70,6 +70,10 @@ export const initTickArray = async (
 	}
 }
 
+export const initProvidedTickArrays = async (initializableTickIndexes: number[], whirlpoolKey: PublicKey) => (
+	Promise.all(initializableTickIndexes.map((ti) => initTickArray(ti, whirlpoolKey)))
+)
+
 // Init tick arrays
 export const initTickArrays = async (whirlpoolKey: PublicKey) => {
 	const { tickArrayPda } = await initTickArray(DEFAULT_START_TICK, whirlpoolKey)

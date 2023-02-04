@@ -21,27 +21,24 @@ pub enum SurfError {
     #[msg("Hegde tick range should be lower than vault tick range")]
     HedgeTickRangeTooBig,
 
-    #[msg("Could not deserialize drift_account_stats")]
-    InvalidDriftAccountStatsAccount,
-
-    #[msg("Provided tick range does not correspond to vault preset")]
-    InvalidProvidedTickRange,
-    #[msg("Current tick index is shifted too many ticks from middle of full tick range")]
-    CurrentTickIndexShiftedFromMidRange,
-
     #[msg("Lower tick index is lower than -443636")]
     LowerTickIndexOutOfBounds,
     #[msg("Upper tick index is higher than 443636")]
     UpperTickIndexOutOfBounds,
 
-    #[msg("Input quote amount is too high")]
-    BaseTokenOverflow,
-
     #[msg("Deposit amount is higher than max amount allowed")]
     SlippageExceeded,
-
     #[msg("Token mints of whirlpools are not matching")]
     WhirlpoolMintsNotMatching,
+
+    #[msg("Whirlpool position is not open")]
+    PositionNotOpen,
+    #[msg("User position is already hedged")]
+    PositionAlreadyHedged,
+
+    // Math
+    #[msg("Input quote amount is too high")]
+    BaseTokenOverflow,
 
     // Whirlpool errors
     // https://github.com/orca-so/whirlpools/blob/main/programs/whirlpool/src/errors.rs

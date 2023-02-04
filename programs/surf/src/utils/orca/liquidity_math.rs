@@ -1,11 +1,35 @@
 use anchor_lang::prelude::*;
 use std::ops::Shr;
-use whirlpools_client::{
-    errors::ErrorCode as WhirlpoolsErrorCode,
-    math::{get_amount_delta_a, get_amount_delta_b, mul_u256, U256Muldiv},
-};
+use whirlpools_client::math::{get_amount_delta_a, get_amount_delta_b, mul_u256, U256Muldiv};
 
+use super::error::transform_error;
 use crate::errors::SurfError;
+
+pub fn get_amount_delta_a_wrapped(
+    sqrt_price_0: u128,
+    sqrt_price_1: u128,
+    liquidity: u128,
+    round_up: bool,
+) -> Result<u64> {
+    let delta_a = get_amount_delta_a(sqrt_price_0, sqrt_price_1, liquidity, round_up);
+    if let Err(err) = delta_a {
+        return Err(transform_error(err).into());
+    }
+    Ok(delta_a.unwrap())
+}
+
+pub fn get_amount_delta_b_wrapped(
+    sqrt_price_0: u128,
+    sqrt_price_1: u128,
+    liquidity: u128,
+    round_up: bool,
+) -> Result<u64> {
+    let delta_b = get_amount_delta_b(sqrt_price_0, sqrt_price_1, liquidity, round_up);
+    if let Err(err) = delta_b {
+        return Err(transform_error(err).into());
+    }
+    Ok(delta_b.unwrap())
+}
 
 pub fn get_whirlpool_input_tokens_deltas(
     liquidity_input: u128,
@@ -13,29 +37,12 @@ pub fn get_whirlpool_input_tokens_deltas(
     upper_sqrt_price: u128,
     lower_sqrt_price: u128,
 ) -> Result<(u64, u64)> {
-    let transform_whirlpool_error = |err: WhirlpoolsErrorCode| match err {
-        WhirlpoolsErrorCode::MultiplicationOverflow => SurfError::MultiplicationOverflow,
-        WhirlpoolsErrorCode::NumberDownCastError => SurfError::NumberDownCastError,
-        WhirlpoolsErrorCode::TokenMaxExceeded => SurfError::TokenMaxExceeded,
-        WhirlpoolsErrorCode::MultiplicationShiftRightOverflow => {
-            SurfError::MultiplicationShiftRightOverflow
-        }
-        _ => unreachable!(),
-    };
-
     let base_token_amount =
-        get_amount_delta_a(current_sqrt_price, upper_sqrt_price, liquidity_input, true);
+        get_amount_delta_a_wrapped(current_sqrt_price, upper_sqrt_price, liquidity_input, true)?;
     let quote_token_amount =
-        get_amount_delta_b(lower_sqrt_price, current_sqrt_price, liquidity_input, true);
+        get_amount_delta_b_wrapped(lower_sqrt_price, current_sqrt_price, liquidity_input, true)?;
 
-    if let Err(err) = base_token_amount {
-        return Err(transform_whirlpool_error(err).into());
-    }
-    if let Err(err) = quote_token_amount {
-        return Err(transform_whirlpool_error(err).into());
-    }
-
-    Ok((base_token_amount.unwrap(), quote_token_amount.unwrap()))
+    Ok((base_token_amount, quote_token_amount))
 }
 
 // The following code is reference from orca-so whirlpools program

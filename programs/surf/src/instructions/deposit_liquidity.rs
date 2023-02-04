@@ -14,7 +14,7 @@ use crate::{
     errors::SurfError,
     state::{UserPosition, Vault},
     utils::{
-        constraints::have_matching_mints,
+        constraints::{have_matching_mints, is_position_open},
         orca::liquidity_math::{
             get_liquidity_from_base_token, get_liquidity_from_quote_token,
             get_whirlpool_input_tokens_deltas,
@@ -95,6 +95,8 @@ pub fn handler(
             real_base_input = _real_base_input;
             real_quote_input = _real_quote_input;
         }
+
+        msg!("sqrt {}", updated_current_sqrt_price);
     }
 
     let real_deposit_quote_amount = whirlpool_input_base_amount_denominated + real_quote_input;
@@ -148,13 +150,15 @@ pub fn handler(
 
     let vault = &ctx.accounts.vault;
     let user_position_bump = ctx.bumps.get("user_position").unwrap();
-    ctx.accounts.user_position.initialize(
+    ctx.accounts.user_position.open(
         *user_position_bump,
         vault.key(),
         real_liquidity_input,
         vault.base_token_total_fee_growth,
         vault.quote_token_total_fee_growth,
     );
+
+    // TODO: Update vault
 
     Ok(())
 }
@@ -167,7 +171,7 @@ pub struct DepositLiquidity<'info> {
     #[account(mut,
         constraint = payer_base_token_account.mint.eq(&whirlpool.token_mint_a)
     )]
-    pub payer_base_token_account: Account<'info, TokenAccount>,
+    pub payer_base_token_account: Box<Account<'info, TokenAccount>>,
 
     #[account(mut,
         constraint = payer_quote_token_account.mint.eq(&whirlpool.token_mint_b)
@@ -181,10 +185,11 @@ pub struct DepositLiquidity<'info> {
             whirlpool.key().as_ref()
         ],
         bump = vault.bump,
+        constraint = is_position_open(&vault) @SurfError::PositionNotOpen
     )]
     pub vault: Box<Account<'info, Vault>>,
     #[account(mut,
-        address = vault.base_token_account.key()
+        address = vault.base_token_account.key(),
     )]
     pub vault_base_token_account: Box<Account<'info, TokenAccount>>,
     #[account(mut,
@@ -241,7 +246,7 @@ pub struct DepositLiquidity<'info> {
 
     // ----------------
     // WHIRLPOOL DEPOSIT ACCOUNT
-    #[account(mut, has_one = whirlpool)]
+    #[account(mut, has_one = whirlpool, address = vault.whirlpool_position)]
     pub whirlpool_position: Box<Account<'info, WhirlpoolPosition>>,
     #[account(mut,
         constraint = whirlpool_position_token_account.amount == 1,

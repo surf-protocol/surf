@@ -16,7 +16,9 @@ pub struct Vault {
     pub drift_stats: Pubkey,      // 32
     pub drift_subaccount: Pubkey, // 32
 
-    pub liquidity: u128, // 16
+    pub liquidity: u128,        // 16
+    pub hedged_liquidity: u128, // 16
+
     // Total fee per one unit of liquidity over the lifetime of vault
     pub base_token_total_fee_growth: u128,  // 16
     pub quote_token_total_fee_growth: u128, // 16
@@ -45,7 +47,7 @@ pub struct Vault {
 }
 
 impl Vault {
-    pub const LEN: usize = 8 + 368;
+    pub const LEN: usize = 8 + 384;
     pub const NAMESPACE: &'static [u8; 5] = b"vault";
 
     pub fn initialize(
