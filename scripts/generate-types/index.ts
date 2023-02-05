@@ -36,6 +36,7 @@ const IDLParsed = JSON.parse(IDLFile) as Idl
 const generatedTypes: Generated = {
 	importsExternal: {
 		'default bn.js': [],
+		'@solana/web3.js': [],
 	},
 	importsInternal: { './types.js': [], './state-accounts.js': [] },
 	output: [],

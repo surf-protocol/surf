@@ -41,7 +41,7 @@ export const getType = (target: Generated, fieldType?: IdlType): string => {
 		return 'Record<string, never>'
 	}
 	if ('defined' in fieldType) {
-		target.importsInternal['./types.js'].push(`${fieldType.defined},`)
+		target.importsInternal['./types.js'].push(`${fieldType.defined}`)
 		return fieldType.defined
 	}
 	if ('vec' in fieldType) {
@@ -50,7 +50,13 @@ export const getType = (target: Generated, fieldType?: IdlType): string => {
 	if ('array' in fieldType) {
 		return `${getType(target, fieldType.array[0])}[]`
 	}
-	// TODO: option, coption, enums with values
+	if ('option' in fieldType) {
+		return `${getType(target, fieldType.option)} | null`
+	}
+	if ('coption' in fieldType) {
+		return `${getType(target, fieldType.coption)} | null`
+	}
+	console.error(`Unknown field type: ${fieldType}`)
 	return ''
 }
 
@@ -94,7 +100,7 @@ export const composeFile = (generated: Generated, forTypes?: boolean) => {
 			importsArr
 				.map(([path, _imports]) => {
 					const [isDefault, realPath] = path.split(' ')
-					if (isDefault.length && realPath) {
+					if (isDefault.length && realPath && _imports.length) {
 						return `import ${_imports[0]} from '${realPath}'`
 					}
 
