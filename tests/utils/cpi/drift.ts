@@ -148,7 +148,12 @@ export const mockDrift = async () => {
 		}),
 	)
 
-	await adminClient.initializeUserAccountAndDepositCollateral(new BN(1000 * LAMPORTS_PER_SOL), baseTokenATA, 1, 0)
+	await adminClient.initializeUserAccountAndDepositCollateral(
+		new BN(1000 * LAMPORTS_PER_SOL),
+		baseTokenATA,
+		1,
+		0,
+	)
 
 	return {
 		driftBaseSpotMarketPDA,

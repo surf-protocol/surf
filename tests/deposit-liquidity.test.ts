@@ -59,10 +59,11 @@ describe('deposit_liquidity', async () => {
 			DEFAULT_TICK_SPACING,
 		)
 
-		const [{ tickArrayPda: upperTickArrayPDA }, { tickArrayPda: lowerTickArrayPDA }] = await initProvidedTickArrays([
-			upperInitializableTickIndex,
-			lowerInitializableTickIndex,
-		], whirlpoolKey)
+		const [{ tickArrayPda: upperTickArrayPDA }, { tickArrayPda: lowerTickArrayPDA }] =
+			await initProvidedTickArrays(
+				[upperInitializableTickIndex, lowerInitializableTickIndex],
+				whirlpoolKey,
+			)
 
 		const [userPosition] = getUserPositionAddress(vaultPDA, wallet.publicKey)
 
