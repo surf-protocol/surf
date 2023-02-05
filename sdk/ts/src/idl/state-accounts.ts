@@ -14,9 +14,9 @@ export const parseAdminConfigAccount = (program: Program<SurfIDL>, data: Buffer 
 		return null
 	}
 	try {
-		return program.coder.accounts.decode('adminConfig', data) as AdminConfigAccount
+		return program.coder.accounts.decode('AdminConfig', data) as AdminConfigAccount
 	} catch {
-		console.error('Account adminConfig could not be parsed')
+		console.error('Account AdminConfig could not be parsed')
 		return null
 	}
 }
@@ -36,9 +36,9 @@ export const parseUserPositionAccount = (program: Program<SurfIDL>, data: Buffer
 		return null
 	}
 	try {
-		return program.coder.accounts.decode('userPosition', data) as UserPositionAccount
+		return program.coder.accounts.decode('UserPosition', data) as UserPositionAccount
 	} catch {
-		console.error('Account userPosition could not be parsed')
+		console.error('Account UserPosition could not be parsed')
 		return null
 	}
 }
@@ -47,9 +47,9 @@ export type VaultAccount = {
 	bump: number
 	whirlpool: PublicKey
 	baseTokenMint: PublicKey
-	baseTokenVault: PublicKey
+	baseTokenAccount: PublicKey
 	quoteTokenMint: PublicKey
-	quoteTokenVault: PublicKey
+	quoteTokenAccount: PublicKey
 	driftStats: PublicKey
 	driftSubaccount: PublicKey
 	liquidity: BN
@@ -72,9 +72,9 @@ export const parseVaultAccount = (program: Program<SurfIDL>, data: Buffer | null
 		return null
 	}
 	try {
-		return program.coder.accounts.decode('vault', data) as VaultAccount
+		return program.coder.accounts.decode('Vault', data) as VaultAccount
 	} catch {
-		console.error('Account vault could not be parsed')
+		console.error('Account Vault could not be parsed')
 		return null
 	}
 }

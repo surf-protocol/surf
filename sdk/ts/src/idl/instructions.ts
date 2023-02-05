@@ -35,10 +35,10 @@ export type InitializeVaultIxAccounts = {
 	adminConfig: PublicKey
 	whirlpool: PublicKey
 	vault: PublicKey
-	tokenMintA: PublicKey
-	tokenVaultA: PublicKey
-	tokenMintB: PublicKey
-	tokenVaultB: PublicKey
+	baseTokenMint: PublicKey
+	quoteTokenMint: PublicKey
+	vaultBaseTokenAccount: PublicKey
+	vaultQuoteTokenAccount: PublicKey
 	driftStats: PublicKey
 	driftSubaccount: PublicKey
 	driftState: PublicKey
@@ -51,7 +51,6 @@ export type InitializeVaultIxAccounts = {
 }
 
 export type InitializeVaultIxArgs = {
-	driftSubaccountId: number
 	fullTickRange: number
 	vaultTickRange: number
 	hedgeTickRange: number
@@ -67,12 +66,7 @@ export const buildInitializeVaultIx = async (
 	{ accounts, args }: InitializeVaultIxParams,
 ) => {
 	const ix = await program.methods
-		.initializeVault(
-			args.driftSubaccountId,
-			args.fullTickRange,
-			args.vaultTickRange,
-			args.hedgeTickRange,
-		)
+		.initializeVault(args.fullTickRange, args.vaultTickRange, args.hedgeTickRange)
 		.accountsStrict(accounts)
 		.instruction()
 	return ix

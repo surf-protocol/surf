@@ -6,13 +6,13 @@ const getArgsTypeName = (ixNameCapitalized: string) => `${ixNameCapitalized}IxAr
 const getParamsTypeName = (ixNameCapitalized: string) => `${ixNameCapitalized}IxParams`
 
 export const composeAccountsType = (accounts: { name: string }[], ixNameCapitalized: string) => {
-  let accountsProps = ''
+	let accountsProps = ''
 	accounts.forEach(({ name: accountName }) => {
-
-
-    accountsProps += indent(`${accountName}: PublicKey`, 1, true)
+		accountsProps += indent(`${accountName}: PublicKey`, 1, true)
 	})
-	return accounts.length ? `\nexport type ${getAccountsTypeName(ixNameCapitalized)} = {\n${accountsProps}}\n` : ''
+	return accounts.length
+		? `\nexport type ${getAccountsTypeName(ixNameCapitalized)} = {\n${accountsProps}}\n`
+		: ''
 }
 
 export const composeArgs = (

@@ -12,8 +12,8 @@ name = "pyth"
 no-entrypoint = []
 no-idl = []
 cpi = ["no-entrypoint"]
-default = ["mainnet-beta"]
-mainnet-beta=[]
+default = ["test"]
+test = []
 
 [dependencies]
 anchor-lang = "0.25.0"
