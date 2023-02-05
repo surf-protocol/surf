@@ -73,10 +73,10 @@ export const buildInitializeVaultIx = async (
 }
 
 // ----------
-// openWhirlpoolPosition
+// openPosition
 // ----------
 
-export type OpenWhirlpoolPositionIxAccounts = {
+export type OpenPositionIxAccounts = {
 	payer: PublicKey
 	whirlpool: PublicKey
 	vault: PublicKey
@@ -90,21 +90,21 @@ export type OpenWhirlpoolPositionIxAccounts = {
 	associatedTokenProgram: PublicKey
 }
 
-export type OpenWhirlpoolPositionIxArgs = {
+export type OpenPositionIxArgs = {
 	positionBump: number
 }
 
-export type OpenWhirlpoolPositionIxParams = {
-	accounts: OpenWhirlpoolPositionIxAccounts
-	args: OpenWhirlpoolPositionIxArgs
+export type OpenPositionIxParams = {
+	accounts: OpenPositionIxAccounts
+	args: OpenPositionIxArgs
 }
 
-export const buildOpenWhirlpoolPositionIx = async (
+export const buildOpenPositionIx = async (
 	program: Program<SurfIDL>,
-	{ accounts, args }: OpenWhirlpoolPositionIxParams,
+	{ accounts, args }: OpenPositionIxParams,
 ) => {
 	const ix = await program.methods
-		.openWhirlpoolPosition(args.positionBump)
+		.openPosition(args.positionBump)
 		.accountsStrict(accounts)
 		.instruction()
 	return ix

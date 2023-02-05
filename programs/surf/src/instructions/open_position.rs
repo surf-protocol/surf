@@ -6,10 +6,11 @@ use whirlpools::{
     state::Whirlpool,
     OpenPositionBumps,
 };
+use whirlpools_client::math::sqrt_price_from_tick_index;
 
 use crate::{
     errors::SurfError,
-    state::Vault,
+    state::{Vault, VaultPosition},
     utils::orca::tick_math::{get_initializable_tick_index, MAX_TICK_INDEX, MIN_TICK_INDEX},
 };
 
@@ -40,9 +41,25 @@ pub fn handler(ctx: Context<OpenPosition>, position_bump: u8) -> Result<()> {
         tick_upper_initializable,
     )?;
 
-    ctx.accounts
-        .vault
-        .open_position(current_tick_index, ctx.accounts.whirlpool_position.key());
+    let upper_sqrt_price = sqrt_price_from_tick_index(tick_upper_initializable);
+    let lower_sqrt_price = sqrt_price_from_tick_index(tick_lower_initializable);
+
+    let vault = &mut ctx.accounts.vault;
+    let vault_position_id = vault.vault_positions_count;
+    let vault_position_bump = ctx.bumps.get("vault_position").unwrap();
+
+    ctx.accounts.vault_position.open(
+        *vault_position_bump,
+        vault_position_id,
+        ctx.accounts.whirlpool_position.key(),
+        0,
+        upper_sqrt_price,
+        lower_sqrt_price,
+        current_tick_index,
+        vault.vault_tick_range,
+    );
+
+    vault.open_position(vault_position_id);
 
     Ok(())
 }
@@ -63,6 +80,18 @@ pub struct OpenPosition<'info> {
         bump = vault.bump
     )]
     pub vault: Box<Account<'info, Vault>>,
+
+    #[account(init,
+        seeds = [
+            VaultPosition::NAMESPACE.as_ref(),
+            vault.key().as_ref(),
+            vault.vault_positions_count.to_le_bytes().as_ref(),
+        ],
+        bump,
+        payer = payer,
+        space = VaultPosition::LEN,
+    )]
+    pub vault_position: Account<'info, VaultPosition>,
 
     /// CHECK: Whirlpool program handles checks
     #[account(mut,

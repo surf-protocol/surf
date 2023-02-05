@@ -1,7 +1,7 @@
 use anchor_lang::prelude::*;
 use whirlpools::Whirlpool;
 
-use crate::state::{AdminConfig, Vault};
+use crate::state::{AdminConfig, Vault, VaultPosition};
 
 pub fn is_admin<'info>(admin_config: &Account<'info, AdminConfig>, admin: &Signer<'info>) -> bool {
     admin_config.admin_key.eq(&admin.key())
@@ -22,6 +22,6 @@ pub fn is_valid_whirlpool<'info>(
     whirlpool.key().eq(&vault.whirlpool)
 }
 
-pub fn is_position_open<'info>(vault: &Account<'info, Vault>) -> bool {
-    vault.whirlpool_position.ne(&Pubkey::default())
+pub fn is_position_open<'info>(vault_position: &Account<'info, VaultPosition>) -> bool {
+    vault_position.whirlpool_position.ne(&Pubkey::default())
 }

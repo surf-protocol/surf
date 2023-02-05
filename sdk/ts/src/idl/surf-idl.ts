@@ -128,7 +128,7 @@ export type SurfIDL = {
 			]
 		},
 		{
-			name: 'openWhirlpoolPosition'
+			name: 'openPosition'
 			accounts: [
 				{
 					name: 'payer'
@@ -536,6 +536,66 @@ export type SurfIDL = {
 					{
 						name: 'feeUnclaimedQuoteToken'
 						type: 'u64'
+					},
+				]
+			}
+		},
+		{
+			name: 'VaultPosition'
+			type: {
+				kind: 'struct'
+				fields: [
+					{
+						name: 'bump'
+						type: 'u8'
+					},
+					{
+						name: 'id'
+						type: 'u64'
+					},
+					{
+						name: 'whirlpoolPosition'
+						type: {
+							option: 'publicKey'
+						}
+					},
+					{
+						name: 'isClosed'
+						type: 'bool'
+					},
+					{
+						name: 'liquidity'
+						type: 'u128'
+					},
+					{
+						name: 'closeSqrtPrice'
+						type: {
+							option: 'i32'
+						}
+					},
+					{
+						name: 'upperSqrtPrice'
+						type: 'i32'
+					},
+					{
+						name: 'lowerSqrtPrice'
+						type: 'i32'
+					},
+					{
+						name: 'baseTokenFeeGrowth'
+						type: 'u128'
+					},
+					{
+						name: 'quoteTokenFeeGrowth'
+						type: 'u128'
+					},
+					{
+						name: 'baseTokenFeeGrowthUnclaimed'
+						type: 'u128'
+					},
+					{
+						name: 'quoteTokenFeeGrowthUnclaimed'
+						type: 'u128'
 					},
 				]
 			}

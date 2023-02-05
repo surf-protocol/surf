@@ -46,6 +46,33 @@ export const parseUserPositionAccount = (program: Program<SurfIDL>, data: Buffer
 	}
 }
 
+export type VaultPositionAccount = {
+	bump: number
+	id: BN
+	whirlpoolPosition: PublicKey | null
+	isClosed: boolean
+	liquidity: BN
+	closeSqrtPrice: number | null
+	upperSqrtPrice: number
+	lowerSqrtPrice: number
+	baseTokenFeeGrowth: BN
+	quoteTokenFeeGrowth: BN
+	baseTokenFeeGrowthUnclaimed: BN
+	quoteTokenFeeGrowthUnclaimed: BN
+}
+
+export const parseVaultPositionAccount = (program: Program<SurfIDL>, data: Buffer | null) => {
+	if (!data) {
+		return null
+	}
+	try {
+		return program.coder.accounts.decode('VaultPosition', data) as VaultPositionAccount
+	} catch {
+		console.error('Account VaultPosition could not be parsed')
+		return null
+	}
+}
+
 export type VaultAccount = {
 	bump: number
 	whirlpool: PublicKey

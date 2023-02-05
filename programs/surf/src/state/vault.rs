@@ -1,5 +1,4 @@
 use anchor_lang::prelude::*;
-use whirlpools::Position as WhirlpoolPosition;
 
 #[account]
 #[derive(Default)]
@@ -17,16 +16,9 @@ pub struct Vault {
     pub drift_stats: Pubkey,      // 32
     pub drift_subaccount: Pubkey, // 32
 
-    pub liquidity: u128,        // 16
-    pub hedged_liquidity: u128, // 16
-
-    // Total fee per one unit of liquidity over the lifetime of vault
-    pub base_token_total_fee_growth: u128,  // 16
-    pub quote_token_total_fee_growth: u128, // 16
-
-    // Unclaimed fee per one unit of liquidity from previous position after price range adjustment
-    pub base_token_fee_unclaimed: u128,  // 16
-    pub quote_token_fee_unclaimed: u128, // 16
+    pub is_active: bool,                        // 1
+    pub vault_positions_count: u64,             // 16
+    pub current_vault_position_id: Option<u64>, // 16
 
     // Full position price range in ticks
     // 1 tick = 1 basis point
@@ -35,20 +27,10 @@ pub struct Vault {
     pub vault_tick_range: u32, // 4
     // Price range without adjusting hedge
     pub hedge_tick_range: u32, // 4
-
-    pub is_active: bool,
-
-    // If vault is not active set these to defaults
-    pub whirlpool_position: Pubkey, // 32
-
-    // If vault is not active set to zero
-    pub vault_upper_tick_index: i32,           // 4
-    pub vault_lower_tick_index: i32,           // 4
-    pub last_hedge_adjustment_tick_index: i32, // 4
 }
 
 impl Vault {
-    pub const LEN: usize = 8 + 384;
+    pub const LEN: usize = 8 + 264;
     pub const NAMESPACE: &'static [u8; 5] = b"vault";
 
     pub fn initialize(
@@ -61,6 +43,7 @@ impl Vault {
         quote_token_account: Pubkey,
         drift_stats: Pubkey,
         drift_subaccount: Pubkey,
+
         full_tick_range: u32,
         vault_tick_range: u32,
         hedge_tick_range: u32,
@@ -76,66 +59,22 @@ impl Vault {
         self.drift_stats = drift_stats;
         self.drift_subaccount = drift_subaccount;
 
-        self.liquidity = 0;
-
-        self.base_token_total_fee_growth = 0;
-        self.quote_token_total_fee_growth = 0;
-        self.base_token_fee_unclaimed = 0;
-        self.quote_token_fee_unclaimed = 0;
+        self.is_active = false;
+        self.vault_positions_count = 0;
+        self.current_vault_position_id = None;
 
         self.full_tick_range = full_tick_range;
         self.vault_tick_range = vault_tick_range;
         self.hedge_tick_range = hedge_tick_range;
-
-        self.is_active = false;
-        self.whirlpool_position = Pubkey::default();
-
-        self.vault_upper_tick_index = 0;
-        self.vault_lower_tick_index = 0;
-        self.last_hedge_adjustment_tick_index = 0;
     }
 
-    pub fn open_position(&mut self, tick_current_index: i32, whirlpool_position: Pubkey) -> () {
+    pub fn open_position(&mut self, vault_position_id: u64) -> () {
         self.is_active = true;
-        self.whirlpool_position = whirlpool_position;
-
-        let vault_tick_range = self.vault_tick_range;
-        let half_vault_range = (vault_tick_range / 2) as i32;
-
-        self.vault_lower_tick_index = tick_current_index - half_vault_range;
-        self.vault_upper_tick_index = tick_current_index + half_vault_range;
-        self.last_hedge_adjustment_tick_index = tick_current_index;
+        self.vault_positions_count = self.vault_positions_count + 1;
+        self.current_vault_position_id = Some(vault_position_id);
     }
 
     pub fn close_position(&mut self) -> () {
         self.is_active = false;
-
-        self.vault_lower_tick_index = 0;
-        self.vault_upper_tick_index = 0;
-        self.last_hedge_adjustment_tick_index = 0;
-    }
-
-    // probably not needed
-    pub fn update_fees<'info>(
-        &mut self,
-        whirlpool_position: &Account<'info, WhirlpoolPosition>,
-    ) -> () {
-        if whirlpool_position.fee_owed_a == 0 && whirlpool_position.fee_owed_b == 0 {
-            ()
-        }
-        // Store pre upadate checkpoint
-        let base_token_fee_growth_checkpoint = whirlpool_position.fee_growth_checkpoint_a;
-        let quote_token_fee_growth_checkpoint = whirlpool_position.fee_growth_checkpoint_b;
-
-        let base_token_unclaimed =
-            base_token_fee_growth_checkpoint - self.base_token_total_fee_growth;
-        let quote_token_unclaimed =
-            quote_token_fee_growth_checkpoint - self.quote_token_total_fee_growth;
-
-        self.base_token_fee_unclaimed = base_token_unclaimed;
-        self.quote_token_fee_unclaimed = quote_token_unclaimed;
-
-        self.base_token_total_fee_growth = base_token_fee_growth_checkpoint;
-        self.quote_token_total_fee_growth = quote_token_fee_growth_checkpoint;
     }
 }

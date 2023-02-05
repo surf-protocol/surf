@@ -1,3 +1,5 @@
+use std::ops::Add;
+
 use anchor_lang::prelude::*;
 use anchor_spl::token::{self, Token, TokenAccount, Transfer};
 use whirlpools::{
@@ -12,7 +14,7 @@ use whirlpools_client::math::{sqrt_price_from_tick_index, MAX_SQRT_PRICE_X64};
 
 use crate::{
     errors::SurfError,
-    state::{UserPosition, Vault},
+    state::{UserPosition, Vault, VaultPosition},
     utils::{
         constraints::{have_matching_mints, is_position_open, is_valid_whirlpool},
         fees::update_and_collect_global_fees,
@@ -29,20 +31,20 @@ pub fn handler(
     // TODO: try to use better slippage checks
     deposit_quote_amount_max: u64,
 ) -> Result<()> {
-    update_and_collect_global_fees(
-        &ctx.accounts.whirlpool,
-        &mut ctx.accounts.whirlpool_position,
-        &ctx.accounts.whirlpool_position_token_account,
-        &ctx.accounts.whirlpool_position_tick_array_lower,
-        &ctx.accounts.whirlpool_position_tick_array_upper,
-        &ctx.accounts.whirlpool_base_token_vault,
-        &ctx.accounts.whirlpool_quote_token_vault,
-        &mut ctx.accounts.vault,
-        &ctx.accounts.vault_base_token_account,
-        &ctx.accounts.vault_quote_token_account,
-        &ctx.accounts.whirlpool_program,
-        &ctx.accounts.token_program,
-    )?;
+    // update_and_collect_global_fees(
+    //     &ctx.accounts.whirlpool,
+    //     &mut ctx.accounts.whirlpool_position,
+    //     &ctx.accounts.whirlpool_position_token_account,
+    //     &ctx.accounts.whirlpool_position_tick_array_lower,
+    //     &ctx.accounts.whirlpool_position_tick_array_upper,
+    //     &ctx.accounts.whirlpool_base_token_vault,
+    //     &ctx.accounts.whirlpool_quote_token_vault,
+    //     &mut ctx.accounts.vault,
+    //     &ctx.accounts.vault_base_token_account,
+    //     &ctx.accounts.vault_quote_token_account,
+    //     &ctx.accounts.whirlpool_program,
+    //     &ctx.accounts.token_program,
+    // )?;
 
     let lower_sqrt_price =
         sqrt_price_from_tick_index(ctx.accounts.whirlpool_position.tick_lower_index);
@@ -111,8 +113,6 @@ pub fn handler(
             real_base_input = _real_base_input;
             real_quote_input = _real_quote_input;
         }
-
-        msg!("sqrt {}", updated_current_sqrt_price);
     }
 
     let real_deposit_quote_amount = whirlpool_input_base_amount_denominated + real_quote_input;
@@ -164,17 +164,20 @@ pub fn handler(
         real_quote_input,
     )?;
 
-    let vault = &ctx.accounts.vault;
+    // -------
+    // UPDATE STATE
+    let vault_position = &mut ctx.accounts.vault_position;
     let user_position_bump = ctx.bumps.get("user_position").unwrap();
+
     ctx.accounts.user_position.open(
         *user_position_bump,
-        vault.key(),
+        ctx.accounts.vault.key(),
         real_liquidity_input,
-        vault.base_token_total_fee_growth,
-        vault.quote_token_total_fee_growth,
+        vault_position.base_token_fee_growth,
+        vault_position.quote_token_fee_growth,
     );
 
-    // TODO: Update vault
+    vault_position.liquidity.add(real_liquidity_input);
 
     Ok(())
 }
@@ -231,13 +234,11 @@ pub struct DepositLiquidity<'info> {
     // ----------------
     // WHIRLPOOL DEPOSIT ACCOUNT
     #[account(mut,
-        has_one = whirlpool_position,
         seeds = [
             Vault::NAMESPACE.as_ref(),
             whirlpool.key().as_ref()
         ],
         bump = vault.bump,
-        constraint = is_position_open(&vault) @SurfError::PositionNotOpen
     )]
     pub vault: Box<Account<'info, Vault>>,
     #[account(mut,
@@ -248,6 +249,11 @@ pub struct DepositLiquidity<'info> {
         address = vault.quote_token_account.key()
     )]
     pub vault_quote_token_account: Box<Account<'info, TokenAccount>>,
+    #[account(mut,
+        constraint = vault.current_vault_position_id.eq(&Some(vault_position.id)),
+        constraint = is_position_open(&vault_position) @SurfError::PositionNotOpen,
+    )]
+    pub vault_position: Box<Account<'info, VaultPosition>>,
 
     // TODO: Init only if needed for subsequent deposits, or init in separate instruction
     #[account(init,
@@ -263,7 +269,7 @@ pub struct DepositLiquidity<'info> {
     pub user_position: Account<'info, UserPosition>,
 
     #[account(mut,
-        address = vault.whirlpool_position @SurfError::InvalidWhirlpoolPosition,
+        address = vault_position.whirlpool_position @SurfError::InvalidWhirlpoolPosition,
     )]
     pub whirlpool_position: Box<Account<'info, WhirlpoolPosition>>,
     #[account(mut,
