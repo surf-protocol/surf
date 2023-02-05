@@ -5,6 +5,7 @@
         "test:new": "anchor deploy && npm run test",
         "test:anchor": "anchor test -- --features test",
         "format": "prettier */*.js \"*/**/*{.js,.ts}\" -w",
+        "format:check": "prettier */*.js \"*/**/*{.js,.ts}\" --check",
         "format:idl:w": "find sdk/ts/src/idl | entr -c prettier sdk/ts/src/idl/**/*.ts -w",
         "build:scripts": "tsc --project scripts/tsconfig.json",
         "build:program:w": "find programs | entr -c anchor build -- --features \"test\"",

@@ -3,12 +3,7 @@ import fs from 'node:fs'
 import path, { dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
-import {
-	buildAccountParser,
-	buildSeparator,
-	buildTypescriptType,
-	composeFile,
-} from './helpers.js'
+import { buildAccountParser, buildSeparator, buildTypescriptType, composeFile } from './helpers.js'
 import {
 	composeAccountsType,
 	composeParamsType,
