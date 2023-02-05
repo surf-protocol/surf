@@ -23,7 +23,7 @@ use crate::{
     errors::SurfError,
     state::{UserPosition, Vault},
     utils::{
-        constraints::{have_matching_mints, is_position_open},
+        constraints::{have_matching_mints, is_position_open, is_valid_whirlpool},
         orca::liquidity_math::{get_amount_delta_a_wrapped, get_amount_delta_b_wrapped},
     },
 };
@@ -146,9 +146,14 @@ pub struct HedgeLiquidity<'info> {
     )]
     pub vault_quote_token_account: Box<Account<'info, TokenAccount>>,
 
+    #[account(
+        constraint = is_valid_whirlpool(&whirlpool, &vault) @SurfError::InvalidWhirlpool,
+    )]
     pub whirlpool: Box<Account<'info, Whirlpool>>,
 
-    #[account(has_one = whirlpool, address = vault.whirlpool_position)]
+    #[account(
+        address = vault.whirlpool_position @SurfError::InvalidWhirlpoolPosition,
+    )]
     pub whirlpool_position: Box<Account<'info, WhirlpoolPosition>>,
 
     // ----------------

@@ -26,11 +26,8 @@ pub mod surf {
         initialize_vault::handler(ctx, full_tick_range, vault_tick_range, hedge_tick_range)
     }
 
-    pub fn open_whirlpool_position(
-        ctx: Context<OpenWhirlpoolPosition>,
-        position_bump: u8,
-    ) -> Result<()> {
-        open_whirlpool_position::handler(ctx, position_bump)
+    pub fn open_position(ctx: Context<OpenPosition>, position_bump: u8) -> Result<()> {
+        open_position::handler(ctx, position_bump)
     }
 
     pub fn deposit_liquidity(

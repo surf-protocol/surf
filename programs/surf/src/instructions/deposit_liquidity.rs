@@ -14,7 +14,8 @@ use crate::{
     errors::SurfError,
     state::{UserPosition, Vault},
     utils::{
-        constraints::{have_matching_mints, is_position_open},
+        constraints::{have_matching_mints, is_position_open, is_valid_whirlpool},
+        fees::update_and_collect_global_fees,
         orca::liquidity_math::{
             get_liquidity_from_base_token, get_liquidity_from_quote_token,
             get_whirlpool_input_tokens_deltas,
@@ -28,6 +29,21 @@ pub fn handler(
     // TODO: try to use better slippage checks
     deposit_quote_amount_max: u64,
 ) -> Result<()> {
+    update_and_collect_global_fees(
+        &ctx.accounts.whirlpool,
+        &mut ctx.accounts.whirlpool_position,
+        &ctx.accounts.whirlpool_position_token_account,
+        &ctx.accounts.whirlpool_position_tick_array_lower,
+        &ctx.accounts.whirlpool_position_tick_array_upper,
+        &ctx.accounts.whirlpool_base_token_vault,
+        &ctx.accounts.whirlpool_quote_token_vault,
+        &mut ctx.accounts.vault,
+        &ctx.accounts.vault_base_token_account,
+        &ctx.accounts.vault_quote_token_account,
+        &ctx.accounts.whirlpool_program,
+        &ctx.accounts.token_program,
+    )?;
+
     let lower_sqrt_price =
         sqrt_price_from_tick_index(ctx.accounts.whirlpool_position.tick_lower_index);
     let upper_sqrt_price =
@@ -178,38 +194,6 @@ pub struct DepositLiquidity<'info> {
     )]
     pub payer_quote_token_account: Box<Account<'info, TokenAccount>>,
 
-    #[account(mut,
-        has_one = whirlpool_position,
-        seeds = [
-            Vault::NAMESPACE.as_ref(),
-            whirlpool.key().as_ref()
-        ],
-        bump = vault.bump,
-        constraint = is_position_open(&vault) @SurfError::PositionNotOpen
-    )]
-    pub vault: Box<Account<'info, Vault>>,
-    #[account(mut,
-        address = vault.base_token_account.key(),
-    )]
-    pub vault_base_token_account: Box<Account<'info, TokenAccount>>,
-    #[account(mut,
-        address = vault.quote_token_account.key()
-    )]
-    pub vault_quote_token_account: Box<Account<'info, TokenAccount>>,
-
-    // TODO: Init only if needed for subsequent deposits
-    #[account(init,
-        seeds = [
-            UserPosition::NAMESPACE.as_ref(),
-            vault.key().as_ref(),
-            payer.key().as_ref(),
-        ],
-        bump,
-        space = UserPosition::LEN,
-        payer = payer
-    )]
-    pub user_position: Account<'info, UserPosition>,
-
     // -------------
     // PREPARE SWAP ACCOUNTS
     #[account(mut)]
@@ -246,10 +230,43 @@ pub struct DepositLiquidity<'info> {
 
     // ----------------
     // WHIRLPOOL DEPOSIT ACCOUNT
-    #[account(mut, has_one = whirlpool, address = vault.whirlpool_position)]
+    #[account(mut,
+        has_one = whirlpool_position,
+        seeds = [
+            Vault::NAMESPACE.as_ref(),
+            whirlpool.key().as_ref()
+        ],
+        bump = vault.bump,
+        constraint = is_position_open(&vault) @SurfError::PositionNotOpen
+    )]
+    pub vault: Box<Account<'info, Vault>>,
+    #[account(mut,
+        address = vault.base_token_account.key(),
+    )]
+    pub vault_base_token_account: Box<Account<'info, TokenAccount>>,
+    #[account(mut,
+        address = vault.quote_token_account.key()
+    )]
+    pub vault_quote_token_account: Box<Account<'info, TokenAccount>>,
+
+    // TODO: Init only if needed for subsequent deposits, or init in separate instruction
+    #[account(init,
+        seeds = [
+            UserPosition::NAMESPACE.as_ref(),
+            vault.key().as_ref(),
+            payer.key().as_ref(),
+        ],
+        bump,
+        space = UserPosition::LEN,
+        payer = payer
+    )]
+    pub user_position: Account<'info, UserPosition>,
+
+    #[account(mut,
+        address = vault.whirlpool_position @SurfError::InvalidWhirlpoolPosition,
+    )]
     pub whirlpool_position: Box<Account<'info, WhirlpoolPosition>>,
     #[account(mut,
-        constraint = whirlpool_position_token_account.amount == 1,
         associated_token::mint = whirlpool_position.position_mint,
         associated_token::authority = vault,
     )]
@@ -262,7 +279,8 @@ pub struct DepositLiquidity<'info> {
     pub whirlpool_position_tick_array_upper: AccountLoader<'info, TickArray>,
 
     #[account(mut,
-        constraint = have_matching_mints(&whirlpool, &prepare_swap_whirlpool) @SurfError::WhirlpoolMintsNotMatching
+        constraint = have_matching_mints(&whirlpool, &prepare_swap_whirlpool) @SurfError::WhirlpoolMintsNotMatching,
+        constraint = is_valid_whirlpool(&whirlpool, &vault) @SurfError::InvalidWhirlpool,
     )]
     pub whirlpool: Box<Account<'info, Whirlpool>>,
 

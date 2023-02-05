@@ -1,7 +1,7 @@
 use anchor_lang::prelude::*;
 use anchor_spl::{associated_token::AssociatedToken, token::Token};
 use whirlpools::{
-    cpi::{self as whirlpool_cpi, accounts::OpenPosition},
+    cpi::{self as whirlpool_cpi, accounts::OpenPosition as OpenWhirlpoolPosition},
     program::Whirlpool as WhirlpoolProgram,
     state::Whirlpool,
     OpenPositionBumps,
@@ -13,7 +13,7 @@ use crate::{
     utils::orca::tick_math::{get_initializable_tick_index, MAX_TICK_INDEX, MIN_TICK_INDEX},
 };
 
-pub fn handler(ctx: Context<OpenWhirlpoolPosition>, position_bump: u8) -> Result<()> {
+pub fn handler(ctx: Context<OpenPosition>, position_bump: u8) -> Result<()> {
     let full_tick_range = ctx.accounts.vault.full_tick_range;
     let one_side_tick_range = (full_tick_range / 2) as i32;
 
@@ -49,7 +49,7 @@ pub fn handler(ctx: Context<OpenWhirlpoolPosition>, position_bump: u8) -> Result
 
 #[derive(Accounts)]
 #[instruction(position_bump: u8)]
-pub struct OpenWhirlpoolPosition<'info> {
+pub struct OpenPosition<'info> {
     #[account(mut)]
     pub payer: Signer<'info>,
 
@@ -90,11 +90,11 @@ pub struct OpenWhirlpoolPosition<'info> {
     pub associated_token_program: Program<'info, AssociatedToken>,
 }
 
-impl<'info> OpenWhirlpoolPosition<'info> {
+impl<'info> OpenPosition<'info> {
     pub fn get_open_whirlpool_position_context(
         &self,
-    ) -> CpiContext<'_, '_, '_, 'info, OpenPosition<'info>> {
-        let accounts = OpenPosition {
+    ) -> CpiContext<'_, '_, '_, 'info, OpenWhirlpoolPosition<'info>> {
+        let accounts = OpenWhirlpoolPosition {
             funder: self.payer.to_account_info(),
             position: self.whirlpool_position.to_account_info(),
             position_mint: self.whirlpool_position_mint.to_account_info(),

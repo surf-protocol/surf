@@ -30,6 +30,10 @@ pub enum SurfError {
     SlippageExceeded,
     #[msg("Token mints of whirlpools are not matching")]
     WhirlpoolMintsNotMatching,
+    #[msg("Whirlpool does not correspond to vault whirlpool")]
+    InvalidWhirlpool,
+    #[msg("Whirlpool position does not correspond to vault whirlpool position")]
+    InvalidWhirlpoolPosition,
 
     #[msg("Whirlpool position is not open")]
     PositionNotOpen,

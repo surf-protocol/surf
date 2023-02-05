@@ -1,4 +1,5 @@
 use anchor_lang::prelude::*;
+use whirlpools_client::math::checked_mul_shift_right;
 
 #[account]
 #[derive(Default)]
@@ -50,5 +51,26 @@ impl UserPosition {
         self.is_hedged = true;
         self.collateral_quote_amount = collateral_quote_amount;
         self.borrow_base_amount = borrow_base_amount;
+    }
+
+    pub fn update_fees(
+        &mut self,
+        current_fee_growth_base_token: u128,
+        current_fee_growth_quote_token: u128,
+    ) -> () {
+        let base_token_fee_growth_delta =
+            current_fee_growth_base_token - self.fee_growth_checkpoint_base_token;
+        let quote_token_fee_growth_delta =
+            current_fee_growth_quote_token - self.fee_growth_checkpoint_quote_token;
+
+        let fee_unclaimed_base_token =
+            checked_mul_shift_right(self.liquidity, base_token_fee_growth_delta).unwrap_or(0);
+        let fee_unclaimed_quote_token =
+            checked_mul_shift_right(self.liquidity, quote_token_fee_growth_delta).unwrap_or(0);
+
+        self.fee_growth_checkpoint_base_token = current_fee_growth_base_token;
+        self.fee_growth_checkpoint_quote_token = current_fee_growth_quote_token;
+        self.fee_unclaimed_base_token = fee_unclaimed_base_token;
+        self.fee_unclaimed_quote_token = fee_unclaimed_quote_token;
     }
 }

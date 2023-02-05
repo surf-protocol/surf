@@ -1,4 +1,5 @@
 use anchor_lang::prelude::*;
+use whirlpools::Position as WhirlpoolPosition;
 
 #[account]
 #[derive(Default)]
@@ -112,5 +113,29 @@ impl Vault {
         self.vault_lower_tick_index = 0;
         self.vault_upper_tick_index = 0;
         self.last_hedge_adjustment_tick_index = 0;
+    }
+
+    // probably not needed
+    pub fn update_fees<'info>(
+        &mut self,
+        whirlpool_position: &Account<'info, WhirlpoolPosition>,
+    ) -> () {
+        if whirlpool_position.fee_owed_a == 0 && whirlpool_position.fee_owed_b == 0 {
+            ()
+        }
+        // Store pre upadate checkpoint
+        let base_token_fee_growth_checkpoint = whirlpool_position.fee_growth_checkpoint_a;
+        let quote_token_fee_growth_checkpoint = whirlpool_position.fee_growth_checkpoint_b;
+
+        let base_token_unclaimed =
+            base_token_fee_growth_checkpoint - self.base_token_total_fee_growth;
+        let quote_token_unclaimed =
+            quote_token_fee_growth_checkpoint - self.quote_token_total_fee_growth;
+
+        self.base_token_fee_unclaimed = base_token_unclaimed;
+        self.quote_token_fee_unclaimed = quote_token_unclaimed;
+
+        self.base_token_total_fee_growth = base_token_fee_growth_checkpoint;
+        self.quote_token_total_fee_growth = quote_token_fee_growth_checkpoint;
     }
 }

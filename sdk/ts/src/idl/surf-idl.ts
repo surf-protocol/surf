@@ -212,26 +212,6 @@ export type SurfIDL = {
 					isSigner: false
 				},
 				{
-					name: 'vault'
-					isMut: true
-					isSigner: false
-				},
-				{
-					name: 'vaultBaseTokenAccount'
-					isMut: true
-					isSigner: false
-				},
-				{
-					name: 'vaultQuoteTokenAccount'
-					isMut: true
-					isSigner: false
-				},
-				{
-					name: 'userPosition'
-					isMut: true
-					isSigner: false
-				},
-				{
 					name: 'prepareSwapWhirlpool'
 					isMut: true
 					isSigner: false
@@ -264,6 +244,26 @@ export type SurfIDL = {
 				{
 					name: 'prepareSwapOracle'
 					isMut: false
+					isSigner: false
+				},
+				{
+					name: 'vault'
+					isMut: true
+					isSigner: false
+				},
+				{
+					name: 'vaultBaseTokenAccount'
+					isMut: true
+					isSigner: false
+				},
+				{
+					name: 'vaultQuoteTokenAccount'
+					isMut: true
+					isSigner: false
+				},
+				{
+					name: 'userPosition'
+					isMut: true
 					isSigner: false
 				},
 				{
@@ -695,36 +695,46 @@ export type SurfIDL = {
 		},
 		{
 			code: 6011
+			name: 'InvalidWhirlpool'
+			msg: 'Whirlpool does not correspond to vault whirlpool'
+		},
+		{
+			code: 6012
+			name: 'InvalidWhirlpoolPosition'
+			msg: 'Whirlpool position does not correspond to vault whirlpool position'
+		},
+		{
+			code: 6013
 			name: 'PositionNotOpen'
 			msg: 'Whirlpool position is not open'
 		},
 		{
-			code: 6012
+			code: 6014
 			name: 'PositionAlreadyHedged'
 			msg: 'User position is already hedged'
 		},
 		{
-			code: 6013
+			code: 6015
 			name: 'BaseTokenOverflow'
 			msg: 'Input quote amount is too high'
 		},
 		{
-			code: 6014
+			code: 6016
 			name: 'TokenMaxExceeded'
 			msg: 'Exceeded token max'
 		},
 		{
-			code: 6015
+			code: 6017
 			name: 'NumberDownCastError'
 			msg: 'Unable to down cast number'
 		},
 		{
-			code: 6016
+			code: 6018
 			name: 'MultiplicationOverflow'
 			msg: 'Multiplication overflow'
 		},
 		{
-			code: 6017
+			code: 6019
 			name: 'MultiplicationShiftRightOverflow'
 			msg: 'Multiplication with shift right overflow'
 		},

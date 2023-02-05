@@ -118,10 +118,6 @@ export type DepositLiquidityIxAccounts = {
 	payer: PublicKey
 	payerBaseTokenAccount: PublicKey
 	payerQuoteTokenAccount: PublicKey
-	vault: PublicKey
-	vaultBaseTokenAccount: PublicKey
-	vaultQuoteTokenAccount: PublicKey
-	userPosition: PublicKey
 	prepareSwapWhirlpool: PublicKey
 	prepareSwapWhirlpoolBaseTokenVault: PublicKey
 	prepareSwapWhirlpoolQuoteTokenVault: PublicKey
@@ -129,6 +125,10 @@ export type DepositLiquidityIxAccounts = {
 	prepareSwapTickArray1: PublicKey
 	prepareSwapTickArray2: PublicKey
 	prepareSwapOracle: PublicKey
+	vault: PublicKey
+	vaultBaseTokenAccount: PublicKey
+	vaultQuoteTokenAccount: PublicKey
+	userPosition: PublicKey
 	whirlpoolPosition: PublicKey
 	whirlpoolPositionTokenAccount: PublicKey
 	whirlpoolPositionTickArrayLower: PublicKey

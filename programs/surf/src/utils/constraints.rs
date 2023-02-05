@@ -15,6 +15,13 @@ pub fn have_matching_mints<'info>(
         && whirlpool_b.token_mint_b.eq(&whirlpool_b.token_mint_b)
 }
 
+pub fn is_valid_whirlpool<'info>(
+    whirlpool: &Account<'info, Whirlpool>,
+    vault: &Account<'info, Vault>,
+) -> bool {
+    whirlpool.key().eq(&vault.whirlpool)
+}
+
 pub fn is_position_open<'info>(vault: &Account<'info, Vault>) -> bool {
     vault.whirlpool_position.ne(&Pubkey::default())
 }
