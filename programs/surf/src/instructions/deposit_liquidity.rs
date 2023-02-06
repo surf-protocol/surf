@@ -17,7 +17,6 @@ use crate::{
     state::{UserPosition, Vault, VaultPosition},
     utils::{
         constraints::{have_matching_mints, is_position_open, is_valid_whirlpool},
-        fees::update_and_collect_global_fees,
         orca::liquidity_math::{
             get_liquidity_from_base_token, get_liquidity_from_quote_token,
             get_whirlpool_input_tokens_deltas,

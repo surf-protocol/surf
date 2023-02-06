@@ -9,9 +9,9 @@ use whirlpools::{
     Position as WhirlpoolPosition, TickArray, Whirlpool,
 };
 
-use crate::state::Vault;
+use crate::state::{Vault, VaultPosition};
 
-pub fn update_and_collect_global_fees<'info>(
+pub fn update_and_transfer_fees_from_whirlpool<'info>(
     whirlpool: &Account<'info, Whirlpool>,
     whirlpool_position: &mut Account<'info, WhirlpoolPosition>,
     whirlpool_position_token_account: &Account<'info, TokenAccount>,
@@ -19,16 +19,13 @@ pub fn update_and_collect_global_fees<'info>(
     tick_array_upper: &AccountLoader<'info, TickArray>,
     whirlpool_base_token_vault: &Account<'info, TokenAccount>,
     whirlpool_quote_token_vault: &Account<'info, TokenAccount>,
-    vault: &mut Account<'info, Vault>,
+    vault: &Account<'info, Vault>,
     vault_base_token_account: &Account<'info, TokenAccount>,
     vault_quote_token_account: &Account<'info, TokenAccount>,
+    vault_position: &mut Account<'info, VaultPosition>,
     whirlpool_program: &Program<'info, WhirlpoolProgram>,
     token_program: &Program<'info, Token>,
 ) -> Result<()> {
-    if vault.liquidity == 0 {
-        return Ok(());
-    }
-
     update_global_fees(
         whirlpool,
         whirlpool_position,
@@ -37,7 +34,7 @@ pub fn update_and_collect_global_fees<'info>(
         whirlpool_program,
     )?;
 
-    collect_global_fees(
+    transfer_to_vault(
         whirlpool,
         whirlpool_base_token_vault,
         whirlpool_quote_token_vault,
@@ -52,7 +49,7 @@ pub fn update_and_collect_global_fees<'info>(
 
     whirlpool_position.reload()?;
 
-    vault.update_fees(whirlpool_position);
+    vault_position.update_fees(whirlpool.fee_growth_global_a, whirlpool.fee_growth_global_b);
 
     Ok(())
 }
@@ -75,7 +72,7 @@ pub fn update_global_fees<'info>(
     whirlpool_cpi::update_fees_and_rewards(ctx)
 }
 
-pub fn collect_global_fees<'info>(
+pub fn transfer_to_vault<'info>(
     whirlpool: &Account<'info, Whirlpool>,
     whirlpool_base_token_vault: &Account<'info, TokenAccount>,
     whirlpool_quote_token_vault: &Account<'info, TokenAccount>,

@@ -15,14 +15,19 @@ use crate::{
 };
 
 pub fn handler(ctx: Context<OpenPosition>, position_bump: u8) -> Result<()> {
+    if ctx.accounts.vault.current_vault_position_id != None {
+        return Err(SurfError::PositionAlreadyOpen.into());
+    }
+
     let full_tick_range = ctx.accounts.vault.full_tick_range;
     let one_side_tick_range = (full_tick_range / 2) as i32;
 
-    let current_tick_index = ctx.accounts.whirlpool.tick_current_index;
+    let whirlpool = &ctx.accounts.whirlpool;
+    let current_tick_index = whirlpool.tick_current_index;
     let tick_upper_index = current_tick_index + one_side_tick_range;
     let tick_lower_index = current_tick_index - one_side_tick_range;
 
-    let tick_spacing = ctx.accounts.whirlpool.tick_spacing;
+    let tick_spacing = whirlpool.tick_spacing;
     let tick_upper_initializable = get_initializable_tick_index(tick_upper_index, tick_spacing);
     let tick_lower_initializable = get_initializable_tick_index(tick_lower_index, tick_spacing);
 
@@ -53,6 +58,8 @@ pub fn handler(ctx: Context<OpenPosition>, position_bump: u8) -> Result<()> {
         vault_position_id,
         ctx.accounts.whirlpool_position.key(),
         0,
+        whirlpool.fee_growth_global_a,
+        whirlpool.fee_growth_global_b,
         upper_sqrt_price,
         lower_sqrt_price,
         current_tick_index,

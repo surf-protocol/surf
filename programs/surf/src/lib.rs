@@ -4,6 +4,7 @@ declare_id!("4wVrbfSHxmhevzPzNfdpmVkJ2jqNRy6RYt4TxcHsnfSo");
 
 pub mod errors;
 pub mod instructions;
+pub mod manager;
 pub mod state;
 pub mod utils;
 
@@ -27,7 +28,7 @@ pub mod surf {
     }
 
     pub fn open_position(ctx: Context<OpenPosition>, position_bump: u8) -> Result<()> {
-        open_position::handler(ctx, position_bump)
+        open_vault_position::handler(ctx, position_bump)
     }
 
     pub fn deposit_liquidity(

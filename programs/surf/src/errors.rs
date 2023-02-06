@@ -21,6 +21,10 @@ pub enum SurfError {
     #[msg("Hegde tick range should be lower than vault tick range")]
     HedgeTickRangeTooBig,
 
+    #[msg("Position can not be open on inactive vault")]
+    PositionCanNotBeOpen,
+    #[msg("Position is already open")]
+    PositionAlreadyOpen,
     #[msg("Invalid vault position id")]
     InvalidVaultPositionId,
     #[msg("Lower tick index is lower than -443636")]

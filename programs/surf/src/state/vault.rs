@@ -16,8 +16,9 @@ pub struct Vault {
     pub drift_stats: Pubkey,      // 32
     pub drift_subaccount: Pubkey, // 32
 
-    pub is_active: bool,                        // 1
-    pub vault_positions_count: u64,             // 16
+    pub is_active: bool,            // 1
+    pub vault_positions_count: u64, // 16
+    // if vault is not active current_vault_position_id is None
     pub current_vault_position_id: Option<u64>, // 16
 
     // Full position price range in ticks
