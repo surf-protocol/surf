@@ -19,7 +19,7 @@ use crate::{
         constraints::{have_matching_mints, is_position_open, is_valid_whirlpool},
         orca::liquidity_math::{
             get_liquidity_from_base_token, get_liquidity_from_quote_token,
-            get_whirlpool_input_tokens_deltas,
+            get_whirlpool_tokens_deltas,
         },
     },
 };
@@ -60,7 +60,7 @@ pub fn handler(
     );
     let current_sqrt_price = ctx.accounts.whirlpool.sqrt_price;
 
-    let (estimated_base_input, estimated_quote_input) = get_whirlpool_input_tokens_deltas(
+    let (estimated_base_input, estimated_quote_input) = get_whirlpool_tokens_deltas(
         estimated_liquidity_input,
         current_sqrt_price,
         upper_sqrt_price,
@@ -103,7 +103,7 @@ pub fn handler(
                 upper_sqrt_price,
                 false,
             )?;
-            let (_real_base_input, _real_quote_input) = get_whirlpool_input_tokens_deltas(
+            let (_real_base_input, _real_quote_input) = get_whirlpool_tokens_deltas(
                 real_liquidity_input,
                 updated_current_sqrt_price,
                 upper_sqrt_price,

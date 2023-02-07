@@ -31,16 +31,25 @@ pub fn get_amount_delta_b_wrapped(
     Ok(delta_b.unwrap())
 }
 
-pub fn get_whirlpool_input_tokens_deltas(
+pub fn get_whirlpool_tokens_deltas(
     liquidity_input: u128,
     current_sqrt_price: u128,
     upper_sqrt_price: u128,
     lower_sqrt_price: u128,
+    deposit: bool,
 ) -> Result<(u64, u64)> {
-    let base_token_amount =
-        get_amount_delta_a_wrapped(current_sqrt_price, upper_sqrt_price, liquidity_input, true)?;
-    let quote_token_amount =
-        get_amount_delta_b_wrapped(lower_sqrt_price, current_sqrt_price, liquidity_input, true)?;
+    let base_token_amount = get_amount_delta_a_wrapped(
+        current_sqrt_price,
+        upper_sqrt_price,
+        liquidity_input,
+        deposit,
+    )?;
+    let quote_token_amount = get_amount_delta_b_wrapped(
+        lower_sqrt_price,
+        current_sqrt_price,
+        liquidity_input,
+        deposit,
+    )?;
 
     Ok((base_token_amount, quote_token_amount))
 }
@@ -52,11 +61,11 @@ pub fn get_liquidity_from_quote_token(
     amount: u64,
     sqrt_price_lower: u128,
     sqrt_price_upper: u128,
-    round_up: bool,
+    withdraw: bool,
 ) -> u128 {
     let numerator = (amount as u128) << 64;
     let denominator = sqrt_price_upper - sqrt_price_lower;
-    if round_up && numerator % denominator > 0_u128 {
+    if withdraw && numerator % denominator > 0_u128 {
         return (numerator / denominator) + 1_u128;
     } else {
         return numerator / denominator;
@@ -67,7 +76,7 @@ pub fn get_liquidity_from_base_token(
     amount: u64,
     sqrt_price_lower: u128,
     sqrt_price_upper: u128,
-    round_up: bool,
+    withdraw: bool,
 ) -> Result<u128> {
     let sqrt_price_range = sqrt_price_upper - sqrt_price_lower;
     // u256 is big enough to perform this calculation
@@ -86,7 +95,7 @@ pub fn get_liquidity_from_base_token(
 
     dbg!(result.unwrap().shr(64));
 
-    if round_up && !remainder.is_zero() {
+    if withdraw && !remainder.is_zero() {
         return Ok((result.unwrap().shr(64) as u128) + 1);
     } else {
         return Ok(result.unwrap().shr(64));

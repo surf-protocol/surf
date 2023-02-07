@@ -3,6 +3,9 @@ use anchor_lang::prelude::*;
 // TODO: Comments with hex values
 #[error_code]
 pub enum SurfError {
+    #[msg("")]
+    CustomError,
+
     #[msg("admin account key does not correspond with admin_config admin_key")]
     InvalidAdmin,
 
@@ -45,6 +48,9 @@ pub enum SurfError {
     PositionNotOpen,
     #[msg("User position is already hedged")]
     PositionAlreadyHedged,
+
+    #[msg("Can not update user position without providing previous vault positions")]
+    MissingPreviousVaultPositions,
 
     // Math
     #[msg("Input quote amount is too high")]
