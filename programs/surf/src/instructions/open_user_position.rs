@@ -7,9 +7,9 @@ use crate::{
 };
 
 pub fn handler(ctx: Context<OpenUserPosition>) -> Result<()> {
-    let whirlpool = ctx.accounts.whirlpool;
-    let vault = ctx.accounts.vault;
-    let vault_position = ctx.accounts.vault_position;
+    let whirlpool = &ctx.accounts.whirlpool;
+    let vault = &ctx.accounts.vault;
+    let vault_position = &ctx.accounts.vault_position;
 
     if vault.current_vault_position_id == None {
         return Err(SurfError::PositionCanNotBeOpen.into());

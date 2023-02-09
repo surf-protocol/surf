@@ -1,5 +1,5 @@
 use anchor_lang::prelude::*;
-use whirlpools_client::math::checked_mul_shift_right;
+use whirlpools_client::math::{checked_mul_shift_right, U256Muldiv};
 
 use crate::errors::SurfError;
 
@@ -77,100 +77,92 @@ impl UserPosition {
         self.hedge_loss_unclaimed_quote_token = 0;
     }
 
-    /// Sync position state with the current state of vault to the latest vault position provided
-    pub fn sync<'info>(
+    pub fn update_fees_and_hedge_losses<'info>(
         &mut self,
-        previous_vault_positions: &[AccountInfo],
-        current_vault_position: &Account<'info, VaultPosition>,
+        vault_position: &Account<'info, VaultPosition>,
+    ) -> () {
+        // UPDATE FEES
+        let (_fee_delta_base_token, _fee_delta_quote_token) = calculate_deltas(
+            self.liquidity,
+            self.fee_growth_checkpoint_base_token,
+            self.fee_growth_checkpoint_quote_token,
+            vault_position.fee_growth_base_token,
+            vault_position.fee_growth_quote_token,
+        );
+        self.fee_unclaimed_base_token = self
+            .fee_unclaimed_base_token
+            .wrapping_add(_fee_delta_base_token);
+        self.fee_unclaimed_quote_token = self
+            .fee_unclaimed_quote_token
+            .wrapping_add(_fee_delta_quote_token);
+
+        // UPDATE HEDGE LOSSES
+        // For now assume position is hedged from deposit
+        // TODO: need to account for positions that were hedged after deposit
+        let (_hedge_delta_base_token, _hedge_delta_quote_token) = calculate_deltas(
+            self.liquidity,
+            self.hedge_adjustment_loss_checkpoint_base_token,
+            self.hedge_adjustment_loss_checkpoint_quote_token,
+            vault_position.hedge_adjustment_loss_base_token,
+            vault_position.hedge_adjustment_loss_quote_token,
+        );
+        self.hedge_loss_unclaimed_base_token = self
+            .hedge_loss_unclaimed_base_token
+            .wrapping_add(_hedge_delta_base_token);
+        self.hedge_loss_unclaimed_quote_token = self
+            .hedge_loss_unclaimed_quote_token
+            .wrapping_add(_hedge_delta_quote_token);
+    }
+
+    pub fn update_range_adjustment_diff<'info>(
+        &mut self,
+        total_vault_liquidity: u128,
+        total_vault_liquidity_diff: i128,
     ) -> Result<()> {
-        let current_vault_position_id = current_vault_position.id;
-
-        let prev_vault_positions_count =
-            (current_vault_position_id - self.vault_position_checkpoint) as usize;
-
-        if prev_vault_positions_count > 0 {
-            require_eq!(
-                previous_vault_positions.len(),
-                0_usize,
-                SurfError::MissingPreviousVaultPositions
-            );
-
-            for vault_position_ai in previous_vault_positions.iter() {
-                let vault_position = Account::<VaultPosition>::try_from(vault_position_ai)?;
-
-                if vault_position.id != self.vault_position_checkpoint {
-                    msg!("Invalid position id: {}; should be {}. Previous positions are either not sorted or starting position is invalid", vault_position.id, self.vault_position_checkpoint);
-                    return Err(SurfError::CustomError.into());
-                }
-
-                if vault_position.id == current_vault_position_id {
-                    break;
-                }
-
-                update_fees(self, &vault_position);
-                update_hedge_losses(self, &vault_position);
-
-                // ----------
-                // UPDATE PRICE RANGE ADJUSTMENT LOSSES
-                let price_range_adjustment_liquidity_loss_bps =
-                    vault_position.range_adjustment_liquidity_loss;
-                let liquidity_loss = price_range_adjustment_liquidity_loss_bps * self.liquidity;
-                self.liquidity = self.liquidity - liquidity_loss;
-
-                self.vault_position_checkpoint = self.vault_position_checkpoint + 1
-            }
-        }
-
-        if self.vault_position_checkpoint != current_vault_position_id {
-            // Exit early, user position was synced up to the latest vault position provided
+        if total_vault_liquidity_diff == 0 {
             return Ok(());
         }
 
-        update_fees(self, &current_vault_position);
-        update_hedge_losses(self, &current_vault_position);
+        let is_loss = total_vault_liquidity_diff < 0;
+        let total_liquidity_diff_abs = total_vault_liquidity_diff.unsigned_abs();
+
+        let total_liquidity = U256Muldiv::new(0, total_vault_liquidity);
+        let total_liquidity_diff = U256Muldiv::new(0, total_liquidity_diff_abs).shift_left(128);
+        let user_liquidity = U256Muldiv::new(0, self.liquidity);
+
+        // g is 128 fractional bits
+        //
+        // TL_l_x128 / TL = g
+        //
+        // where - TL_l = total vault liquidity loss shifted left by 128 bits -> 256 bits integer, always bigger than 128 bits integer
+        //       - TL = total vault liquidity -> 128 bits integer
+        //
+        let (g, g_remainder) = total_liquidity_diff.div(total_liquidity, true);
+        // u128 * u128 = u256
+        let user_liquidity_loss_shifted = g.mul(user_liquidity);
+
+        // user liquidity loss is always in bounds of 128 bits integer
+        // u256 >> 128 = u256 / u128 = u128
+        let user_liquidity_diff = user_liquidity_loss_shifted
+            .shift_right(128)
+            .try_into_u128()
+            .unwrap();
+
+        let is_rem = g_remainder.gt(U256Muldiv::new(0, 0));
+
+        if is_loss {
+            self.liquidity = subtract_liquidity_diff(self.liquidity, user_liquidity_diff, is_rem)?;
+        } else {
+            self.liquidity = add_liquidity_diff(self.liquidity, user_liquidity_diff, is_rem)?;
+        }
 
         Ok(())
     }
-}
 
-pub fn update_fees<'info>(
-    user_position: &mut UserPosition,
-    vault_position: &Account<'info, VaultPosition>,
-) -> () {
-    let (_fee_delta_base_token, _fee_delta_quote_token) = calculate_deltas(
-        user_position.liquidity,
-        user_position.fee_growth_checkpoint_base_token,
-        user_position.fee_growth_checkpoint_quote_token,
-        vault_position.fee_growth_base_token,
-        vault_position.fee_growth_quote_token,
-    );
-    user_position.fee_unclaimed_base_token = user_position
-        .fee_unclaimed_base_token
-        .wrapping_add(_fee_delta_base_token);
-    user_position.fee_unclaimed_quote_token = user_position
-        .fee_unclaimed_quote_token
-        .wrapping_add(_fee_delta_quote_token);
-}
-
-pub fn update_hedge_losses<'info>(
-    user_position: &mut UserPosition,
-    vault_position: &Account<'info, VaultPosition>,
-) -> () {
-    // For now assume position is hedged from deposit
-    // TODO: need to account for positions that were hedged after deposit
-    let (_hedge_delta_base_token, _hedge_delta_quote_token) = calculate_deltas(
-        user_position.liquidity,
-        user_position.hedge_adjustment_loss_checkpoint_base_token,
-        user_position.hedge_adjustment_loss_checkpoint_quote_token,
-        vault_position.hedge_adjustment_loss_base_token,
-        vault_position.hedge_adjustment_loss_quote_token,
-    );
-    user_position.hedge_loss_unclaimed_base_token = user_position
-        .hedge_loss_unclaimed_base_token
-        .wrapping_add(_hedge_delta_base_token);
-    user_position.hedge_loss_unclaimed_quote_token = user_position
-        .hedge_loss_unclaimed_quote_token
-        .wrapping_add(_hedge_delta_quote_token);
+    pub fn reset_fees(&mut self) -> () {
+        self.fee_unclaimed_base_token = 0;
+        self.fee_unclaimed_quote_token = 0;
+    }
 }
 
 pub fn calculate_deltas<'info>(
@@ -191,4 +183,102 @@ pub fn calculate_deltas<'info>(
         checked_mul_shift_right(delta_quote_token_per_unit, liquidity).unwrap_or(0);
 
     (delta_base_token, delta_quote_token)
+}
+
+pub fn add_liquidity_diff(liquidity: u128, diff: u128, add_rem: bool) -> Result<u128> {
+    let rem: u128 = if add_rem { 1 } else { 0 };
+    let x = liquidity
+        .checked_add(diff)
+        .ok_or(SurfError::LiquidityDiffTooHigh)?;
+    let y = x.checked_add(rem).ok_or(SurfError::LiquidityDiffTooHigh)?;
+    Ok(y)
+}
+
+pub fn subtract_liquidity_diff(liquidity: u128, diff: u128, sub_rem: bool) -> Result<u128> {
+    let rem: u128 = if sub_rem { 1 } else { 0 };
+    let x = liquidity
+        .checked_sub(diff)
+        .ok_or(SurfError::LiquidityDiffTooLow)?;
+    let y = x.checked_sub(rem).ok_or(SurfError::LiquidityDiffTooLow)?;
+    Ok(y)
+}
+
+#[cfg(test)]
+mod test_user_position {
+    use crate::errors::SurfError;
+
+    use super::UserPosition;
+
+    #[test]
+    fn valid_positive_liq_with_remainder_update_range_adjustment_diff() {
+        let mut user_position = UserPosition::default();
+        user_position.liquidity = 1_000_000;
+
+        assert_eq!(
+            user_position.update_range_adjustment_diff(10_000_000, 1000),
+            Ok(())
+        );
+        assert_eq!(user_position.liquidity, 1_000_100_u128)
+    }
+
+    #[test]
+    fn valid_negative_liq_with_remainder_update_range_adjustment_diff() {
+        let mut user_position = UserPosition::default();
+        user_position.liquidity = 1_000_000;
+
+        assert_eq!(
+            user_position.update_range_adjustment_diff(10_000_000, -1000),
+            Ok(())
+        );
+        assert_eq!(user_position.liquidity, 999_900_u128)
+    }
+
+    #[test]
+    fn valid_negative_liq_extremes_update_range_adjustment_diff() {
+        let mut user_position = UserPosition::default();
+        user_position.liquidity = 1;
+
+        assert_eq!(
+            user_position.update_range_adjustment_diff(u128::MAX, i128::MIN),
+            Ok(())
+        );
+        assert_eq!(user_position.liquidity, 0)
+    }
+
+    #[test]
+    fn success_no_overflow_update_range_adjustment_diff() {
+        let mut user_position = UserPosition::default();
+        user_position.liquidity = u128::MAX;
+
+        assert_eq!(
+            user_position.update_range_adjustment_diff(u128::MAX, -1000),
+            Ok(())
+        );
+        assert_eq!(user_position.liquidity, u128::MAX - 1000)
+    }
+
+    #[test]
+    fn panic_overflow_update_range_adjustment_diff() {
+        let mut user_position = UserPosition::default();
+        user_position.liquidity = u128::MAX;
+
+        assert_eq!(
+            user_position
+                .update_range_adjustment_diff(u128::MAX, 1)
+                .unwrap_err(),
+            SurfError::LiquidityDiffTooLow.into(),
+        )
+    }
+
+    #[test]
+    fn success_position_not_rem_update_range_adjustment_diff() {
+        let mut user_position = UserPosition::default();
+        user_position.liquidity = 100;
+
+        assert_eq!(
+            user_position.update_range_adjustment_diff(200, -100),
+            Ok(())
+        );
+        assert_eq!(user_position.liquidity, 50)
+    }
 }

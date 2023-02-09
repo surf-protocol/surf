@@ -11,7 +11,7 @@ pub fn handler(ctx: Context<CollectFees>) -> Result<()> {
     let vault_base_token_account = &ctx.accounts.vault_base_token_account;
     let vault_quote_token_account = &ctx.accounts.vault_quote_token_account;
     let vault_position = &mut ctx.accounts.vault_position;
-    let whirlpool = &mut ctx.accounts.whirlpool;
+    let mut whirlpool = &mut ctx.accounts.whirlpool;
     let whirlpool_position = &ctx.accounts.whirlpool_position;
     let whirlpool_program = &ctx.accounts.whirlpool_program;
     let token_program = &ctx.accounts.token_program;

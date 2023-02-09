@@ -1,12 +1,11 @@
 use anchor_lang::prelude::*;
 use anchor_spl::token::{self, Token, TokenAccount, Transfer};
-use whirlpools::Whirlpool;
 
 use crate::state::{UserPosition, Vault};
 
 pub fn handler(ctx: Context<CollectUserFees>) -> Result<()> {
     let user_position = &mut ctx.accounts.user_position;
-    let token_program = ctx.accounts.token_program;
+    let token_program = &ctx.accounts.token_program;
 
     token::transfer(
         CpiContext::new(
@@ -32,8 +31,7 @@ pub fn handler(ctx: Context<CollectUserFees>) -> Result<()> {
         user_position.fee_unclaimed_quote_token,
     )?;
 
-    user_position.fee_unclaimed_base_token = 0;
-    user_position.fee_unclaimed_quote_token = 0;
+    user_position.reset_fees();
 
     Ok(())
 }

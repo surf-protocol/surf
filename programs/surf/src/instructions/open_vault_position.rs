@@ -55,8 +55,9 @@ pub fn handler(ctx: Context<OpenPosition>, position_bump: u8) -> Result<()> {
 
     ctx.accounts.vault_position.open(
         *vault_position_bump,
-        vault_position_id,
+        vault.key(),
         ctx.accounts.whirlpool_position.key(),
+        vault_position_id,
         0,
         whirlpool.fee_growth_global_a,
         whirlpool.fee_growth_global_b,

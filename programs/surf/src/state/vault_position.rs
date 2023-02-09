@@ -17,8 +17,9 @@ use super::Vault;
 pub struct VaultPosition {
     pub bump: u8, // 1
 
-    pub id: u64,                    // 8
+    pub vault: Pubkey,              // 32
     pub whirlpool_position: Pubkey, // 32
+    pub id: u64,                    // 8
     pub is_closed: bool,            // 1
 
     pub liquidity: u128, // 16
@@ -32,10 +33,8 @@ pub struct VaultPosition {
     pub fee_growth_base_token: u128,  // 16
     pub fee_growth_quote_token: u128, // 16
 
-    // Loss from price range adjustment as percentage
-    // Next vault position liquidity is lower by
-    // liquidity - liquidity * range_adjustment_liquidity_loss
-    pub range_adjustment_liquidity_loss: u128, // 16
+    // Total vault liquidity from range_adjustment
+    pub range_adjustment_liquidity_diff: i128,
 
     // Loss from hedge adjustments swaps per one unit of liquidity
     pub hedge_adjustment_loss_base_token: u128,  // 16
@@ -47,14 +46,15 @@ pub struct VaultPosition {
 }
 
 impl VaultPosition {
-    pub const LEN: usize = 8 + 264;
+    pub const LEN: usize = 8 + 248;
     pub const NAMESPACE: &'static [u8; 14] = b"vault_position";
 
     pub fn open(
         &mut self,
         bump: u8,
-        id: u64,
+        vault: Pubkey,
         whirlpool_position: Pubkey,
+        id: u64,
         liquidity: u128,
 
         current_fee_growth_base_token: u128,
@@ -67,8 +67,9 @@ impl VaultPosition {
         vault_tick_range: u32,
     ) -> () {
         self.bump = bump;
-        self.id = id;
+        self.vault = vault;
         self.whirlpool_position = whirlpool_position;
+        self.id = id;
         self.is_closed = false;
 
         self.liquidity = liquidity;
@@ -81,7 +82,7 @@ impl VaultPosition {
         self.fee_growth_quote_token = current_fee_growth_quote_token;
 
         // Can be initialized to zero because it is specific to vault position
-        self.range_adjustment_liquidity_loss = 0;
+        self.range_adjustment_liquidity_diff = 0;
 
         self.hedge_adjustment_loss_base_token = 0;
         self.hedge_adjustment_loss_quote_token = 0;

@@ -55,6 +55,10 @@ pub enum SurfError {
     // Math
     #[msg("Input quote amount is too high")]
     BaseTokenOverflow,
+    #[msg("Liquidity diff is too high")]
+    LiquidityDiffTooHigh,
+    #[msg("Liquidity diff is too low")]
+    LiquidityDiffTooLow,
 
     // Whirlpool errors
     // https://github.com/orca-so/whirlpools/blob/main/programs/whirlpool/src/errors.rs
