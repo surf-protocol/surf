@@ -116,45 +116,41 @@ impl UserPosition {
 
     pub fn update_range_adjustment_diff<'info>(
         &mut self,
-        total_vault_liquidity: u128,
-        total_vault_liquidity_diff: i128,
+        vault_liquidity: u128,
+        vault_liquidity_diff: i128,
     ) -> Result<()> {
-        if total_vault_liquidity_diff == 0 {
+        if vault_liquidity_diff == 0 {
             return Ok(());
         }
 
-        let is_loss = total_vault_liquidity_diff < 0;
-        let total_liquidity_diff_abs = total_vault_liquidity_diff.unsigned_abs();
+        let is_loss = vault_liquidity_diff < 0;
+        let vault_liquidity_diff_abs = vault_liquidity_diff.unsigned_abs();
 
-        let total_liquidity = U256Muldiv::new(0, total_vault_liquidity);
-        let total_liquidity_diff = U256Muldiv::new(0, total_liquidity_diff_abs).shift_left(128);
-        let user_liquidity = U256Muldiv::new(0, self.liquidity);
-
-        // g is 128 fractional bits
-        //
-        // TL_l_x128 / TL = g
-        //
-        // where - TL_l = total vault liquidity loss shifted left by 128 bits -> 256 bits integer, always bigger than 128 bits integer
-        //       - TL = total vault liquidity -> 128 bits integer
-        //
-        let (g, g_remainder) = total_liquidity_diff.div(total_liquidity, true);
-        // u128 * u128 = u256
-        let user_liquidity_loss_shifted = g.mul(user_liquidity);
-
-        // user liquidity loss is always in bounds of 128 bits integer
-        // u256 >> 128 = u256 / u128 = u128
-        let user_liquidity_diff = user_liquidity_loss_shifted
-            .shift_right(128)
-            .try_into_u128()
-            .unwrap();
-
-        let is_rem = g_remainder.gt(U256Muldiv::new(0, 0));
-
-        if is_loss {
-            self.liquidity = subtract_liquidity_diff(self.liquidity, user_liquidity_diff, is_rem)?;
+        let new_vault_liquidity = if is_loss {
+            vault_liquidity
+                .checked_sub(vault_liquidity_diff_abs)
+                .ok_or(SurfError::LiquidityDiffTooHigh)?
         } else {
-            self.liquidity = add_liquidity_diff(self.liquidity, user_liquidity_diff, is_rem)?;
+            vault_liquidity
+                .checked_add(vault_liquidity_diff_abs)
+                .ok_or(SurfError::LiquidityDiffTooHigh)?
+        };
+
+        let user_liquidity_u256 = U256Muldiv::new(0, self.liquidity);
+        let current_vault_liquidity_u256 = U256Muldiv::new(0, vault_liquidity);
+        let new_vault_liquidity_u256 = U256Muldiv::new(0, new_vault_liquidity);
+
+        let new_user_liquidity_u256 = user_liquidity_u256
+            .mul(new_vault_liquidity_u256)
+            .div(current_vault_liquidity_u256, false);
+
+        let new_user_liquidity = new_user_liquidity_u256.0.try_into_u128();
+
+        if let Err(_) = new_user_liquidity {
+            return Err(SurfError::LiquidityDiffTooHigh.into());
         }
+
+        self.liquidity = new_user_liquidity.unwrap();
 
         Ok(())
     }
@@ -186,99 +182,92 @@ pub fn calculate_deltas<'info>(
 }
 
 pub fn add_liquidity_diff(liquidity: u128, diff: u128, add_rem: bool) -> Result<u128> {
+    println!("d {} ; r {}", diff, add_rem);
+
     let rem: u128 = if add_rem { 1 } else { 0 };
+    let diff_with_rem = diff.checked_add(rem).unwrap_or(0);
+
+    println!("{}", diff_with_rem);
+
     let x = liquidity
         .checked_add(diff)
         .ok_or(SurfError::LiquidityDiffTooHigh)?;
-    let y = x.checked_add(rem).ok_or(SurfError::LiquidityDiffTooHigh)?;
-    Ok(y)
+
+    Ok(x)
 }
 
 pub fn subtract_liquidity_diff(liquidity: u128, diff: u128, sub_rem: bool) -> Result<u128> {
     let rem: u128 = if sub_rem { 1 } else { 0 };
+    let diff_with_rem = diff.checked_add(rem).unwrap_or(0);
+
     let x = liquidity
-        .checked_sub(diff)
-        .ok_or(SurfError::LiquidityDiffTooLow)?;
-    let y = x.checked_sub(rem).ok_or(SurfError::LiquidityDiffTooLow)?;
-    Ok(y)
+        .checked_sub(diff_with_rem)
+        .ok_or(SurfError::LiquidityDiffTooHigh)?;
+
+    Ok(x)
 }
 
 #[cfg(test)]
 mod test_user_position {
     use crate::errors::SurfError;
 
-    use super::UserPosition;
+    #[cfg(test)]
+    mod test_update_range_adjustment_diff {
+        use crate::state::UserPosition;
 
-    #[test]
-    fn valid_positive_liq_with_remainder_update_range_adjustment_diff() {
-        let mut user_position = UserPosition::default();
-        user_position.liquidity = 1_000_000;
+        use super::SurfError;
 
-        assert_eq!(
-            user_position.update_range_adjustment_diff(10_000_000, 1000),
-            Ok(())
-        );
-        assert_eq!(user_position.liquidity, 1_000_100_u128)
-    }
+        #[test]
+        fn test_update_range_adjustment_add_ok() {
+            let mut user_position = UserPosition::default();
+            user_position.liquidity = 100;
 
-    #[test]
-    fn valid_negative_liq_with_remainder_update_range_adjustment_diff() {
-        let mut user_position = UserPosition::default();
-        user_position.liquidity = 1_000_000;
+            let result = user_position.update_range_adjustment_diff(200, 50);
 
-        assert_eq!(
-            user_position.update_range_adjustment_diff(10_000_000, -1000),
-            Ok(())
-        );
-        assert_eq!(user_position.liquidity, 999_900_u128)
-    }
+            assert!(result.is_ok());
+            assert_eq!(user_position.liquidity, 125);
+        }
 
-    #[test]
-    fn valid_negative_liq_extremes_update_range_adjustment_diff() {
-        let mut user_position = UserPosition::default();
-        user_position.liquidity = 1;
+        #[test]
+        fn test_update_range_adjustment_sub_ok() {
+            let mut user_position = UserPosition::default();
+            user_position.liquidity = 100;
 
-        assert_eq!(
-            user_position.update_range_adjustment_diff(u128::MAX, i128::MIN),
-            Ok(())
-        );
-        assert_eq!(user_position.liquidity, 0)
-    }
+            let result = user_position.update_range_adjustment_diff(200, -50);
 
-    #[test]
-    fn success_no_overflow_update_range_adjustment_diff() {
-        let mut user_position = UserPosition::default();
-        user_position.liquidity = u128::MAX;
+            assert!(result.is_ok());
+            assert_eq!(user_position.liquidity, 75);
+        }
 
-        assert_eq!(
-            user_position.update_range_adjustment_diff(u128::MAX, -1000),
-            Ok(())
-        );
-        assert_eq!(user_position.liquidity, u128::MAX - 1000)
-    }
+        #[test]
+        fn test_update_range_adjustment_diff_liquidity_diff_zero() {
+            let mut user_position = UserPosition::default();
+            user_position.liquidity = 100;
 
-    #[test]
-    fn panic_overflow_update_range_adjustment_diff() {
-        let mut user_position = UserPosition::default();
-        user_position.liquidity = u128::MAX;
+            let result = user_position.update_range_adjustment_diff(200, 0);
 
-        assert_eq!(
-            user_position
-                .update_range_adjustment_diff(u128::MAX, 1)
-                .unwrap_err(),
-            SurfError::LiquidityDiffTooLow.into(),
-        )
-    }
+            assert!(result.is_ok());
+            assert_eq!(user_position.liquidity, 100);
+        }
 
-    #[test]
-    fn success_position_not_rem_update_range_adjustment_diff() {
-        let mut user_position = UserPosition::default();
-        user_position.liquidity = 100;
+        #[test]
+        fn test_update_range_adjustment_diff_liquidity_diff_higher_than_vault_liquidity() {
+            let mut user_position = UserPosition::default();
+            user_position.liquidity = 100;
 
-        assert_eq!(
-            user_position.update_range_adjustment_diff(200, -100),
-            Ok(())
-        );
-        assert_eq!(user_position.liquidity, 50)
+            let result = user_position.update_range_adjustment_diff(50, -100);
+
+            assert_eq!(result.unwrap_err(), SurfError::LiquidityDiffTooHigh.into())
+        }
+
+        #[test]
+        fn test_update_range_adjustment_diff_overflow() {
+            let mut user_position = UserPosition::default();
+            user_position.liquidity = u128::MAX;
+
+            let result = user_position.update_range_adjustment_diff(u128::MAX, 1);
+
+            assert_eq!(result.unwrap_err(), SurfError::LiquidityDiffTooHigh.into())
+        }
     }
 }

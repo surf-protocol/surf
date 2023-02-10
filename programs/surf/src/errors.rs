@@ -44,6 +44,8 @@ pub enum SurfError {
     #[msg("Whirlpool position does not correspond to vault whirlpool position")]
     InvalidWhirlpoolPosition,
 
+    #[msg("Position is not synce to current state, call sync_user_position first")]
+    PositionNotSynced,
     #[msg("Whirlpool position is not open")]
     PositionNotOpen,
     #[msg("User position is already hedged")]
@@ -57,8 +59,6 @@ pub enum SurfError {
     BaseTokenOverflow,
     #[msg("Liquidity diff is too high")]
     LiquidityDiffTooHigh,
-    #[msg("Liquidity diff is too low")]
-    LiquidityDiffTooLow,
 
     // Whirlpool errors
     // https://github.com/orca-so/whirlpools/blob/main/programs/whirlpool/src/errors.rs
