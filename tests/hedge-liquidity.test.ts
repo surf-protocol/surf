@@ -11,7 +11,7 @@ import { driftOracle, driftSignerKey, driftStateKey, mockDrift } from './utils/c
 import { fundPosition, initWhirlpool } from './utils/cpi/whirlpool.js'
 import { connection, program, wallet } from './utils/load-config.js'
 import { baseTokenATA, quoteTokenATA } from './utils/mint.js'
-import { mockAdminConfig, mockVault, mockVaultWhirlpoolPosition } from './utils/mock.js'
+import { mockAdminConfig, mockVault, mockVaultPosition } from './utils/mock.js'
 import { buildAndSendTx } from './utils/transaction.js'
 
 describe.only('hedge_liquidity', async () => {
@@ -52,20 +52,16 @@ describe.only('hedge_liquidity', async () => {
 		const upperTickIndex = currentTickIndex + fullTickRange / 2
 		const lowerTickIndex = currentTickIndex - fullTickRange / 2
 
-		const { whirlpoolPositionPDA, userPosition } = await mockVaultWhirlpoolPosition(
-			vaultPDA,
-			whirlpoolKey,
-			{
-				liquidityAmount: 100,
-				whirlpoolData,
-				oracleKey,
-				tickArrays,
-				vaultBaseTokenAccount,
-				vaultQuoteTokenAccount,
-				upperTickIndex,
-				lowerTickIndex,
-			},
-		)
+		const { whirlpoolPositionPDA, userPosition } = await mockVaultPosition(vaultPDA, whirlpoolKey, {
+			liquidityAmount: 100,
+			whirlpoolData,
+			oracleKey,
+			tickArrays,
+			vaultBaseTokenAccount,
+			vaultQuoteTokenAccount,
+			upperTickIndex,
+			lowerTickIndex,
+		})
 
 		const { driftStats, driftSubaccount } = getVaultDriftAccountsAddresses(vaultPDA)
 

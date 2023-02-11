@@ -14,7 +14,7 @@ use crate::{
     errors::SurfError,
     state::{UserPosition, Vault, VaultPosition},
     utils::{
-        constraints::{have_matching_mints, is_vault_position_updated},
+        constraints::{have_matching_mints, is_vault_position_open, is_vault_position_updated},
         orca::liquidity_math::{get_liquidity_from_base_token, get_whirlpool_tokens_deltas},
     },
 };
@@ -124,6 +124,7 @@ pub fn handler(
         real_quote_input,
     )?;
 
+    // TODO: Update checkpoints user post deposit
     // DEPOSIT LIQUIDITY
     whirlpool_cpi::increase_liquidity(
         ctx.accounts.whirlpool_deposit_context(),
@@ -183,6 +184,7 @@ pub struct DepositLiquidity<'info> {
         constraint = vault_position.vault.eq(&vault.key()),
         constraint = vault_position.id == vault.vault_positions_count,
         constraint = is_vault_position_updated(&vault_position, &whirlpool) @SurfError::VaultPositionNotUpdated,
+        constraint = is_vault_position_open(&vault_position) @SurfError::VaultPositionNotOpened,
         has_one = whirlpool_position,
     )]
     pub vault_position: Account<'info, VaultPosition>,

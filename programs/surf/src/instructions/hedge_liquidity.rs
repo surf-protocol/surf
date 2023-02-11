@@ -23,7 +23,7 @@ use crate::{
     errors::SurfError,
     state::{UserPosition, Vault},
     utils::{
-        constraints::{have_matching_mints, is_position_open, is_valid_whirlpool},
+        constraints::{have_matching_mints, is_valid_whirlpool, is_vault_position_open},
         orca::liquidity_math::{get_amount_delta_a_wrapped, get_amount_delta_b_wrapped},
     },
 };

@@ -4,7 +4,7 @@ import { TOKEN_PROGRAM_ID } from '@solana/spl-token'
 import { ORCA_WHIRLPOOL_PROGRAM_ID, TickUtil } from '@orca-so/whirlpools-sdk'
 import BN from 'bn.js'
 
-import { mockAdminConfig, mockVault, mockVaultWhirlpoolPosition } from './utils/mock.js'
+import { mockAdminConfig, mockVault, mockVaultPosition } from './utils/mock.js'
 import { mockDrift } from './utils/cpi/drift.js'
 import {
 	initWhirlpool,
@@ -43,8 +43,10 @@ describe('deposit_liquidity', async () => {
 			},
 		)
 
-		const { whirlpoolPositionPDA, whirlpoolPositionVaultTokenAccount } =
-			await mockVaultWhirlpoolPosition(vaultPDA, whirlpoolKey)
+		const { whirlpoolPositionPDA, whirlpoolPositionVaultTokenAccount } = await mockVaultPosition(
+			vaultPDA,
+			whirlpoolKey,
+		)
 
 		const currentTickIndex = whirlpoolData.tickCurrentIndex
 		const upperTickIndex = currentTickIndex + fullTickRange / 2

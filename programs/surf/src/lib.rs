@@ -26,8 +26,24 @@ pub mod surf {
         initialize_vault::handler(ctx, full_tick_range, vault_tick_range, hedge_tick_range)
     }
 
-    pub fn open_position(ctx: Context<OpenPosition>, position_bump: u8) -> Result<()> {
+    pub fn open_vault_position(ctx: Context<OpenVaultPosition>, position_bump: u8) -> Result<()> {
         open_vault_position::handler(ctx, position_bump)
+    }
+
+    pub fn collect_vault_fees(ctx: Context<CollectVaultFees>) -> Result<()> {
+        collect_vault_fees::handler(ctx)
+    }
+
+    pub fn open_user_position(ctx: Context<OpenUserPosition>) -> Result<()> {
+        open_user_position::handler(ctx)
+    }
+
+    pub fn sync_user_position(ctx: Context<SyncUserPosition>) -> Result<()> {
+        sync_user_position::handler(ctx)
+    }
+
+    pub fn collect_user_fees(ctx: Context<CollectUserFees>) -> Result<()> {
+        collect_user_fees::handler(ctx)
     }
 
     pub fn deposit_liquidity(
@@ -36,9 +52,5 @@ pub mod surf {
         deposit_quote_input_max: u64,
     ) -> Result<()> {
         deposit_liquidity::handler(ctx, liquidity_input, deposit_quote_input_max)
-    }
-
-    pub fn hedge_liquidity(ctx: Context<HedgeLiquidity>) -> Result<()> {
-        hedge_liquidity::handler(ctx)
     }
 }

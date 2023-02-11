@@ -47,6 +47,8 @@ pub enum SurfError {
     #[msg("Position is not synced to current state, call sync_user_position first")]
     UserPositionNotSynced,
 
+    #[msg("Provided vault position is not opened")]
+    VaultPositionNotOpened,
     #[msg("Vault position fees are not updated, call collect_vault_fees")]
     VaultPositionNotUpdated,
     #[msg("Can not update user position without providing previous vault positions")]

@@ -49,18 +49,17 @@ describe('initialize_vault', async () => {
 				hedgeTickRange,
 			},
 			accounts: {
-				baseTokenMint,
-				quoteTokenMint,
-				vaultBaseTokenAccount,
-				vaultQuoteTokenAccount,
-				driftStats,
-				driftSubaccount,
-
 				admin: wallet.publicKey,
 				adminConfig: adminConfigPDA,
 				whirlpool: whirlpoolKey,
 				vault: vaultPDA,
+				baseTokenMint,
+				quoteTokenMint,
+				vaultBaseTokenAccount,
+				vaultQuoteTokenAccount,
 
+				driftStats,
+				driftSubaccount,
 				driftState: driftStateKey,
 
 				whirlpoolProgram: ORCA_WHIRLPOOL_PROGRAM_ID,
@@ -76,14 +75,12 @@ describe('initialize_vault', async () => {
 			connection,
 			[wallet],
 			[ComputeBudgetProgram.setComputeUnitLimit({ units: 1_400_000 }), ix],
-			true,
 		)
 
 		const vaultAccountInfo = await connection.getAccountInfo(vaultPDA)
 		const vaultAccount = parseVaultAccount(program, vaultAccountInfo.data)
 
 		expect(vaultAccount.bump).toBe(vaultBump)
-
 		expect(vaultAccount.whirlpool.equals(whirlpoolKey)).toBe(true)
 
 		expect(vaultAccount.baseTokenMint.equals(baseTokenMint)).toBe(true)
@@ -94,22 +91,15 @@ describe('initialize_vault', async () => {
 		expect(vaultAccount.driftStats.equals(driftStats)).toBe(true)
 		expect(vaultAccount.driftSubaccount.equals(driftSubaccount)).toBe(true)
 
-		expect(vaultAccount.liquidity.toNumber()).toBe(0)
-		expect(vaultAccount.baseTokenTotalFeeGrowth.toNumber()).toBe(0)
-		expect(vaultAccount.quoteTokenTotalFeeGrowth.toNumber()).toBe(0)
-		expect(vaultAccount.baseTokenFeeUnclaimed.toNumber()).toBe(0)
-		expect(vaultAccount.quoteTokenFeeUnclaimed.toNumber()).toBe(0)
-
 		expect(vaultAccount.fullTickRange).toBe(fullTickRange)
 		expect(vaultAccount.vaultTickRange).toBe(vaultTickRange)
 		expect(vaultAccount.hedgeTickRange).toBe(hedgeTickRange)
 
 		expect(vaultAccount.isActive).toBe(false)
-		expect(vaultAccount.whirlpoolPosition.equals(PublicKey.default)).toBe(true)
-		expect(vaultAccount.vaultUpperTickIndex).toBe(0)
-		expect(vaultAccount.vaultLowerTickIndex).toBe(0)
-		expect(vaultAccount.lastHedgeAdjustmentTickIndex).toBe(0)
+		expect(vaultAccount.vaultPositionsCount.toNumber()).toBe(0)
+		expect(vaultAccount.currentVaultPositionId).toBe(null)
 
+		// eslint-disable-next-line @typescript-eslint/ban-ts-comment
 		// @ts-ignore
 		const [driftSubaccountData, driftStatsData] = await Promise.all([
 			driftProgram.account['user'].fetch(driftSubaccount, 'confirmed') as Promise<UserAccount>,

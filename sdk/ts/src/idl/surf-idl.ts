@@ -128,7 +128,7 @@ export type SurfIDL = {
 			]
 		},
 		{
-			name: 'openPosition'
+			name: 'openVaultPosition'
 			accounts: [
 				{
 					name: 'payer'
@@ -142,6 +142,11 @@ export type SurfIDL = {
 				},
 				{
 					name: 'vault'
+					isMut: true
+					isSigner: false
+				},
+				{
+					name: 'vaultPosition'
 					isMut: true
 					isSigner: false
 				},
@@ -194,97 +199,12 @@ export type SurfIDL = {
 			]
 		},
 		{
-			name: 'depositLiquidity'
+			name: 'collectVaultFees'
 			accounts: [
 				{
 					name: 'payer'
-					isMut: true
-					isSigner: true
-				},
-				{
-					name: 'payerBaseTokenAccount'
-					isMut: true
-					isSigner: false
-				},
-				{
-					name: 'payerQuoteTokenAccount'
-					isMut: true
-					isSigner: false
-				},
-				{
-					name: 'prepareSwapWhirlpool'
-					isMut: true
-					isSigner: false
-				},
-				{
-					name: 'prepareSwapWhirlpoolBaseTokenVault'
-					isMut: true
-					isSigner: false
-				},
-				{
-					name: 'prepareSwapWhirlpoolQuoteTokenVault'
-					isMut: true
-					isSigner: false
-				},
-				{
-					name: 'prepareSwapTickArray0'
-					isMut: true
-					isSigner: false
-				},
-				{
-					name: 'prepareSwapTickArray1'
-					isMut: true
-					isSigner: false
-				},
-				{
-					name: 'prepareSwapTickArray2'
-					isMut: true
-					isSigner: false
-				},
-				{
-					name: 'prepareSwapOracle'
 					isMut: false
-					isSigner: false
-				},
-				{
-					name: 'vault'
-					isMut: true
-					isSigner: false
-				},
-				{
-					name: 'vaultBaseTokenAccount'
-					isMut: true
-					isSigner: false
-				},
-				{
-					name: 'vaultQuoteTokenAccount'
-					isMut: true
-					isSigner: false
-				},
-				{
-					name: 'userPosition'
-					isMut: true
-					isSigner: false
-				},
-				{
-					name: 'whirlpoolPosition'
-					isMut: true
-					isSigner: false
-				},
-				{
-					name: 'whirlpoolPositionTokenAccount'
-					isMut: true
-					isSigner: false
-				},
-				{
-					name: 'whirlpoolPositionTickArrayLower'
-					isMut: true
-					isSigner: false
-				},
-				{
-					name: 'whirlpoolPositionTickArrayUpper'
-					isMut: true
-					isSigner: false
+					isSigner: true
 				},
 				{
 					name: 'whirlpool'
@@ -302,6 +222,46 @@ export type SurfIDL = {
 					isSigner: false
 				},
 				{
+					name: 'tickArrayLower'
+					isMut: false
+					isSigner: false
+				},
+				{
+					name: 'tickArrayUpper'
+					isMut: false
+					isSigner: false
+				},
+				{
+					name: 'whirlpoolPosition'
+					isMut: true
+					isSigner: false
+				},
+				{
+					name: 'whirlpoolPositionTokenAccount'
+					isMut: false
+					isSigner: false
+				},
+				{
+					name: 'vault'
+					isMut: false
+					isSigner: false
+				},
+				{
+					name: 'vaultBaseTokenAccount'
+					isMut: true
+					isSigner: false
+				},
+				{
+					name: 'vaultQuoteTokenAccount'
+					isMut: true
+					isSigner: false
+				},
+				{
+					name: 'vaultPosition'
+					isMut: true
+					isSigner: false
+				},
+				{
 					name: 'whirlpoolProgram'
 					isMut: false
 					isSigner: false
@@ -311,25 +271,119 @@ export type SurfIDL = {
 					isMut: false
 					isSigner: false
 				},
+			]
+			args: []
+		},
+		{
+			name: 'openUserPosition'
+			accounts: [
+				{
+					name: 'positionAuthority'
+					isMut: true
+					isSigner: true
+				},
+				{
+					name: 'whirlpool'
+					isMut: false
+					isSigner: false
+				},
+				{
+					name: 'vault'
+					isMut: true
+					isSigner: false
+				},
+				{
+					name: 'vaultPosition'
+					isMut: true
+					isSigner: false
+				},
+				{
+					name: 'userPosition'
+					isMut: true
+					isSigner: false
+				},
 				{
 					name: 'systemProgram'
 					isMut: false
 					isSigner: false
 				},
 			]
-			args: [
-				{
-					name: 'whirlpoolDepositQuoteAmount'
-					type: 'u64'
-				},
-				{
-					name: 'whirlpoolDepositQuoteAmountMax'
-					type: 'u64'
-				},
-			]
+			args: []
 		},
 		{
-			name: 'hedgeLiquidity'
+			name: 'syncUserPosition'
+			accounts: [
+				{
+					name: 'authority'
+					isMut: false
+					isSigner: true
+				},
+				{
+					name: 'vault'
+					isMut: false
+					isSigner: false
+				},
+				{
+					name: 'userPosition'
+					isMut: true
+					isSigner: false
+				},
+				{
+					name: 'currentVaultPosition'
+					isMut: true
+					isSigner: false
+				},
+			]
+			args: []
+		},
+		{
+			name: 'collectUserFees'
+			accounts: [
+				{
+					name: 'authority'
+					isMut: false
+					isSigner: true
+				},
+				{
+					name: 'authorityBaseTokenAccount'
+					isMut: true
+					isSigner: false
+				},
+				{
+					name: 'authorityQuoteTokenAccount'
+					isMut: true
+					isSigner: false
+				},
+				{
+					name: 'vault'
+					isMut: false
+					isSigner: false
+				},
+				{
+					name: 'vaultBaseTokenAccount'
+					isMut: true
+					isSigner: false
+				},
+				{
+					name: 'vaultQuoteTokenAccount'
+					isMut: true
+					isSigner: false
+				},
+				{
+					name: 'userPosition'
+					isMut: true
+					isSigner: false
+				},
+				{
+					name: 'tokenProgram'
+					isMut: false
+					isSigner: false
+				},
+			]
+			args: []
+		},
+		{
+			name: 'depositLiquidity'
 			accounts: [
 				{
 					name: 'payer'
@@ -352,8 +406,13 @@ export type SurfIDL = {
 					isSigner: false
 				},
 				{
-					name: 'vault'
+					name: 'vaultPosition'
 					isMut: true
+					isSigner: false
+				},
+				{
+					name: 'vault'
+					isMut: false
 					isSigner: false
 				},
 				{
@@ -367,97 +426,62 @@ export type SurfIDL = {
 					isSigner: false
 				},
 				{
-					name: 'whirlpool'
-					isMut: false
-					isSigner: false
-				},
-				{
 					name: 'whirlpoolPosition'
 					isMut: false
 					isSigner: false
 				},
 				{
-					name: 'driftState'
+					name: 'whirlpoolPositionTokenAccount'
 					isMut: false
 					isSigner: false
 				},
 				{
-					name: 'driftSigner'
+					name: 'whirlpool'
 					isMut: false
 					isSigner: false
 				},
 				{
-					name: 'driftQuoteSpotMarketVault'
-					isMut: true
-					isSigner: false
-				},
-				{
-					name: 'driftBaseSpotMarketVault'
-					isMut: true
-					isSigner: false
-				},
-				{
-					name: 'driftBaseTokenOracle'
+					name: 'tickArrayLower'
 					isMut: false
 					isSigner: false
 				},
 				{
-					name: 'driftBaseSpotMarket'
-					isMut: true
-					isSigner: false
-				},
-				{
-					name: 'driftQuoteSpotMarket'
-					isMut: true
-					isSigner: false
-				},
-				{
-					name: 'driftStats'
-					isMut: true
-					isSigner: false
-				},
-				{
-					name: 'driftSubaccount'
-					isMut: true
-					isSigner: false
-				},
-				{
-					name: 'hedgeSwapWhirlpool'
-					isMut: true
-					isSigner: false
-				},
-				{
-					name: 'hedgeSwapWhirlpoolBaseTokenVault'
-					isMut: true
-					isSigner: false
-				},
-				{
-					name: 'hedgeSwapWhirlpoolQuoteTokenVault'
-					isMut: true
-					isSigner: false
-				},
-				{
-					name: 'hedgeSwapTickArray0'
-					isMut: true
-					isSigner: false
-				},
-				{
-					name: 'hedgeSwapTickArray1'
-					isMut: true
-					isSigner: false
-				},
-				{
-					name: 'hedgeSwapTickArray2'
-					isMut: true
-					isSigner: false
-				},
-				{
-					name: 'hedgeSwapOracle'
+					name: 'tickArrayUpper'
 					isMut: false
 					isSigner: false
 				},
 				{
-					name: 'driftProgram'
+					name: 'swapWhirlpool'
+					isMut: true
+					isSigner: false
+				},
+				{
+					name: 'swapWhirlpoolBaseTokenAccount'
+					isMut: true
+					isSigner: false
+				},
+				{
+					name: 'swapWhirlpoolQuoteTokenAccount'
+					isMut: true
+					isSigner: false
+				},
+				{
+					name: 'tickArray0'
+					isMut: true
+					isSigner: false
+				},
+				{
+					name: 'tickArray1'
+					isMut: true
+					isSigner: false
+				},
+				{
+					name: 'tickArray2'
+					isMut: true
+					isSigner: false
+				},
+				{
+					name: 'swapOracle'
 					isMut: false
 					isSigner: false
 				},
@@ -472,7 +496,16 @@ export type SurfIDL = {
 					isSigner: false
 				},
 			]
-			args: []
+			args: [
+				{
+					name: 'liquidityInput'
+					type: 'u128'
+				},
+				{
+					name: 'depositQuoteInputMax'
+					type: 'u64'
+				},
+			]
 		},
 	]
 	accounts: [
@@ -522,6 +555,11 @@ export type SurfIDL = {
 						type: 'u64'
 					},
 					{
+						name: 'vaultPositionCheckpoint'
+						docs: ['Id of active vault position at time of last sync']
+						type: 'u64'
+					},
+					{
 						name: 'feeGrowthCheckpointBaseToken'
 						type: 'u128'
 					},
@@ -530,11 +568,27 @@ export type SurfIDL = {
 						type: 'u128'
 					},
 					{
+						name: 'hedgeAdjustmentLossCheckpointBaseToken'
+						type: 'u128'
+					},
+					{
+						name: 'hedgeAdjustmentLossCheckpointQuoteToken'
+						type: 'u128'
+					},
+					{
 						name: 'feeUnclaimedBaseToken'
 						type: 'u64'
 					},
 					{
 						name: 'feeUnclaimedQuoteToken'
+						type: 'u64'
+					},
+					{
+						name: 'hedgeLossUnclaimedBaseToken'
+						type: 'u64'
+					},
+					{
+						name: 'hedgeLossUnclaimedQuoteToken'
 						type: 'u64'
 					},
 				]
@@ -550,14 +604,16 @@ export type SurfIDL = {
 						type: 'u8'
 					},
 					{
-						name: 'id'
-						type: 'u64'
+						name: 'vault'
+						type: 'publicKey'
 					},
 					{
 						name: 'whirlpoolPosition'
-						type: {
-							option: 'publicKey'
-						}
+						type: 'publicKey'
+					},
+					{
+						name: 'id'
+						type: 'u64'
 					},
 					{
 						name: 'isClosed'
@@ -570,32 +626,50 @@ export type SurfIDL = {
 					{
 						name: 'closeSqrtPrice'
 						type: {
-							option: 'i32'
+							option: 'u128'
 						}
 					},
 					{
 						name: 'upperSqrtPrice'
-						type: 'i32'
+						type: 'u128'
 					},
 					{
 						name: 'lowerSqrtPrice'
+						type: 'u128'
+					},
+					{
+						name: 'feeGrowthBaseToken'
+						type: 'u128'
+					},
+					{
+						name: 'feeGrowthQuoteToken'
+						type: 'u128'
+					},
+					{
+						name: 'rangeAdjustmentLiquidityDiff'
+						type: 'i128'
+					},
+					{
+						name: 'hedgeAdjustmentLossBaseToken'
+						type: 'u128'
+					},
+					{
+						name: 'hedgeAdjustmentLossQuoteToken'
+						type: 'u128'
+					},
+					{
+						name: 'vaultUpperTickIndex'
 						type: 'i32'
 					},
 					{
-						name: 'baseTokenFeeGrowth'
-						type: 'u128'
+						name: 'vaultLowerTickIndex'
+						type: 'i32'
 					},
 					{
-						name: 'quoteTokenFeeGrowth'
-						type: 'u128'
-					},
-					{
-						name: 'baseTokenFeeGrowthUnclaimed'
-						type: 'u128'
-					},
-					{
-						name: 'quoteTokenFeeGrowthUnclaimed'
-						type: 'u128'
+						name: 'lastHedgeAdjustmentTickIndex'
+						type: {
+							option: 'i32'
+						}
 					},
 				]
 			}
@@ -638,28 +712,18 @@ export type SurfIDL = {
 						type: 'publicKey'
 					},
 					{
-						name: 'liquidity'
-						type: 'u128'
+						name: 'isActive'
+						type: 'bool'
 					},
 					{
-						name: 'hedgedLiquidity'
-						type: 'u128'
+						name: 'vaultPositionsCount'
+						type: 'u64'
 					},
 					{
-						name: 'baseTokenTotalFeeGrowth'
-						type: 'u128'
-					},
-					{
-						name: 'quoteTokenTotalFeeGrowth'
-						type: 'u128'
-					},
-					{
-						name: 'baseTokenFeeUnclaimed'
-						type: 'u128'
-					},
-					{
-						name: 'quoteTokenFeeUnclaimed'
-						type: 'u128'
+						name: 'currentVaultPositionId'
+						type: {
+							option: 'u64'
+						}
 					},
 					{
 						name: 'fullTickRange'
@@ -673,26 +737,6 @@ export type SurfIDL = {
 						name: 'hedgeTickRange'
 						type: 'u32'
 					},
-					{
-						name: 'isActive'
-						type: 'bool'
-					},
-					{
-						name: 'whirlpoolPosition'
-						type: 'publicKey'
-					},
-					{
-						name: 'vaultUpperTickIndex'
-						type: 'i32'
-					},
-					{
-						name: 'vaultLowerTickIndex'
-						type: 'i32'
-					},
-					{
-						name: 'lastHedgeAdjustmentTickIndex'
-						type: 'i32'
-					},
 				]
 			}
 		},
@@ -700,101 +744,141 @@ export type SurfIDL = {
 	errors: [
 		{
 			code: 6000
+			name: 'CustomError'
+			msg: ''
+		},
+		{
+			code: 6001
 			name: 'InvalidAdmin'
 			msg: 'admin account key does not correspond with admin_config admin_key'
 		},
 		{
-			code: 6001
+			code: 6002
 			name: 'InvalidQuoteTokenMint'
 			msg: 'Quote token mint has to be USDC'
 		},
 		{
-			code: 6002
+			code: 6003
 			name: 'FullTickRangeTooSmall'
 			msg: 'Whirlpool position price range should be higher than 400 ticks'
 		},
 		{
-			code: 6003
+			code: 6004
 			name: 'VaultTickRangeTooSmall'
 			msg: 'Vault tick range should be higher than 200 ticks'
 		},
 		{
-			code: 6004
+			code: 6005
 			name: 'VaultTickRangeTooBig'
 			msg: 'Vault tick range should be lower or equal than 50% of full tick range'
 		},
 		{
-			code: 6005
+			code: 6006
 			name: 'HedgeTickRangeTooSmall'
 			msg: 'Hegde tick range should be higher than 20 ticks'
 		},
 		{
-			code: 6006
+			code: 6007
 			name: 'HedgeTickRangeTooBig'
 			msg: 'Hegde tick range should be lower than vault tick range'
 		},
 		{
-			code: 6007
+			code: 6008
+			name: 'PositionCanNotBeOpen'
+			msg: 'Position can not be open on inactive vault'
+		},
+		{
+			code: 6009
+			name: 'PositionAlreadyOpen'
+			msg: 'Position is already open'
+		},
+		{
+			code: 6010
+			name: 'InvalidVaultPositionId'
+			msg: 'Invalid vault position id'
+		},
+		{
+			code: 6011
 			name: 'LowerTickIndexOutOfBounds'
 			msg: 'Lower tick index is lower than -443636'
 		},
 		{
-			code: 6008
+			code: 6012
 			name: 'UpperTickIndexOutOfBounds'
 			msg: 'Upper tick index is higher than 443636'
 		},
 		{
-			code: 6009
+			code: 6013
 			name: 'SlippageExceeded'
 			msg: 'Deposit amount is higher than max amount allowed'
 		},
 		{
-			code: 6010
+			code: 6014
 			name: 'WhirlpoolMintsNotMatching'
 			msg: 'Token mints of whirlpools are not matching'
 		},
 		{
-			code: 6011
+			code: 6015
 			name: 'InvalidWhirlpool'
 			msg: 'Whirlpool does not correspond to vault whirlpool'
 		},
 		{
-			code: 6012
+			code: 6016
 			name: 'InvalidWhirlpoolPosition'
 			msg: 'Whirlpool position does not correspond to vault whirlpool position'
 		},
 		{
-			code: 6013
-			name: 'PositionNotOpen'
-			msg: 'Whirlpool position is not open'
+			code: 6017
+			name: 'UserPositionNotSynced'
+			msg: 'Position is not synced to current state, call sync_user_position first'
 		},
 		{
-			code: 6014
-			name: 'PositionAlreadyHedged'
-			msg: 'User position is already hedged'
+			code: 6018
+			name: 'VaultPositionNotOpened'
+			msg: 'Provided vault position is not opened'
 		},
 		{
-			code: 6015
+			code: 6019
+			name: 'VaultPositionNotUpdated'
+			msg: 'Vault position fees are not updated, call collect_vault_fees'
+		},
+		{
+			code: 6020
+			name: 'MissingPreviousVaultPositions'
+			msg: 'Can not update user position without providing previous vault positions'
+		},
+		{
+			code: 6021
 			name: 'BaseTokenOverflow'
 			msg: 'Input quote amount is too high'
 		},
 		{
-			code: 6016
+			code: 6022
+			name: 'LiquidityOverflow'
+			msg: 'Liquidity overflow'
+		},
+		{
+			code: 6023
+			name: 'LiquidityDiffTooHigh'
+			msg: 'Liquidity diff is too high'
+		},
+		{
+			code: 6024
 			name: 'TokenMaxExceeded'
 			msg: 'Exceeded token max'
 		},
 		{
-			code: 6017
+			code: 6025
 			name: 'NumberDownCastError'
 			msg: 'Unable to down cast number'
 		},
 		{
-			code: 6018
+			code: 6026
 			name: 'MultiplicationOverflow'
 			msg: 'Multiplication overflow'
 		},
 		{
-			code: 6019
+			code: 6027
 			name: 'MultiplicationShiftRightOverflow'
 			msg: 'Multiplication with shift right overflow'
 		},

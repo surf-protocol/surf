@@ -28,10 +28,15 @@ export type UserPositionAccount = {
 	isHedged: boolean
 	collateralQuoteAmount: BN
 	borrowBaseAmount: BN
+	vaultPositionCheckpoint: BN
 	feeGrowthCheckpointBaseToken: BN
 	feeGrowthCheckpointQuoteToken: BN
+	hedgeAdjustmentLossCheckpointBaseToken: BN
+	hedgeAdjustmentLossCheckpointQuoteToken: BN
 	feeUnclaimedBaseToken: BN
 	feeUnclaimedQuoteToken: BN
+	hedgeLossUnclaimedBaseToken: BN
+	hedgeLossUnclaimedQuoteToken: BN
 }
 
 export const parseUserPositionAccount = (program: Program<SurfIDL>, data: Buffer | null) => {
@@ -48,17 +53,22 @@ export const parseUserPositionAccount = (program: Program<SurfIDL>, data: Buffer
 
 export type VaultPositionAccount = {
 	bump: number
+	vault: PublicKey
+	whirlpoolPosition: PublicKey
 	id: BN
-	whirlpoolPosition: PublicKey | null
 	isClosed: boolean
 	liquidity: BN
-	closeSqrtPrice: number | null
-	upperSqrtPrice: number
-	lowerSqrtPrice: number
-	baseTokenFeeGrowth: BN
-	quoteTokenFeeGrowth: BN
-	baseTokenFeeGrowthUnclaimed: BN
-	quoteTokenFeeGrowthUnclaimed: BN
+	closeSqrtPrice: BN | null
+	upperSqrtPrice: BN
+	lowerSqrtPrice: BN
+	feeGrowthBaseToken: BN
+	feeGrowthQuoteToken: BN
+	rangeAdjustmentLiquidityDiff: BN
+	hedgeAdjustmentLossBaseToken: BN
+	hedgeAdjustmentLossQuoteToken: BN
+	vaultUpperTickIndex: number
+	vaultLowerTickIndex: number
+	lastHedgeAdjustmentTickIndex: number | null
 }
 
 export const parseVaultPositionAccount = (program: Program<SurfIDL>, data: Buffer | null) => {
@@ -82,20 +92,12 @@ export type VaultAccount = {
 	quoteTokenAccount: PublicKey
 	driftStats: PublicKey
 	driftSubaccount: PublicKey
-	liquidity: BN
-	hedgedLiquidity: BN
-	baseTokenTotalFeeGrowth: BN
-	quoteTokenTotalFeeGrowth: BN
-	baseTokenFeeUnclaimed: BN
-	quoteTokenFeeUnclaimed: BN
+	isActive: boolean
+	vaultPositionsCount: BN
+	currentVaultPositionId: BN | null
 	fullTickRange: number
 	vaultTickRange: number
 	hedgeTickRange: number
-	isActive: boolean
-	whirlpoolPosition: PublicKey
-	vaultUpperTickIndex: number
-	vaultLowerTickIndex: number
-	lastHedgeAdjustmentTickIndex: number
 }
 
 export const parseVaultAccount = (program: Program<SurfIDL>, data: Buffer | null) => {

@@ -30,6 +30,6 @@ pub fn is_vault_position_updated<'info>(
         && vault_position.fee_growth_quote_token == whirlpool.fee_growth_global_b
 }
 
-pub fn is_position_open<'info>(vault_position: &Account<'info, VaultPosition>) -> bool {
+pub fn is_vault_position_open<'info>(vault_position: &Account<'info, VaultPosition>) -> bool {
     vault_position.whirlpool_position.ne(&Pubkey::default())
 }

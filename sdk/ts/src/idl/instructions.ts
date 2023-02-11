@@ -73,13 +73,14 @@ export const buildInitializeVaultIx = async (
 }
 
 // ----------
-// openPosition
+// openVaultPosition
 // ----------
 
-export type OpenPositionIxAccounts = {
+export type OpenVaultPositionIxAccounts = {
 	payer: PublicKey
 	whirlpool: PublicKey
 	vault: PublicKey
+	vaultPosition: PublicKey
 	whirlpoolPosition: PublicKey
 	whirlpoolPositionMint: PublicKey
 	whirlpoolPositionTokenAccount: PublicKey
@@ -90,23 +91,131 @@ export type OpenPositionIxAccounts = {
 	associatedTokenProgram: PublicKey
 }
 
-export type OpenPositionIxArgs = {
+export type OpenVaultPositionIxArgs = {
 	positionBump: number
 }
 
-export type OpenPositionIxParams = {
-	accounts: OpenPositionIxAccounts
-	args: OpenPositionIxArgs
+export type OpenVaultPositionIxParams = {
+	accounts: OpenVaultPositionIxAccounts
+	args: OpenVaultPositionIxArgs
 }
 
-export const buildOpenPositionIx = async (
+export const buildOpenVaultPositionIx = async (
 	program: Program<SurfIDL>,
-	{ accounts, args }: OpenPositionIxParams,
+	{ accounts, args }: OpenVaultPositionIxParams,
 ) => {
 	const ix = await program.methods
-		.openPosition(args.positionBump)
+		.openVaultPosition(args.positionBump)
 		.accountsStrict(accounts)
 		.instruction()
+	return ix
+}
+
+// ----------
+// collectVaultFees
+// ----------
+
+export type CollectVaultFeesIxAccounts = {
+	payer: PublicKey
+	whirlpool: PublicKey
+	whirlpoolBaseTokenVault: PublicKey
+	whirlpoolQuoteTokenVault: PublicKey
+	tickArrayLower: PublicKey
+	tickArrayUpper: PublicKey
+	whirlpoolPosition: PublicKey
+	whirlpoolPositionTokenAccount: PublicKey
+	vault: PublicKey
+	vaultBaseTokenAccount: PublicKey
+	vaultQuoteTokenAccount: PublicKey
+	vaultPosition: PublicKey
+	whirlpoolProgram: PublicKey
+	tokenProgram: PublicKey
+}
+
+export type CollectVaultFeesIxParams = {
+	accounts: CollectVaultFeesIxAccounts
+}
+
+export const buildCollectVaultFeesIx = async (
+	program: Program<SurfIDL>,
+	{ accounts }: CollectVaultFeesIxParams,
+) => {
+	const ix = await program.methods.collectVaultFees().accountsStrict(accounts).instruction()
+	return ix
+}
+
+// ----------
+// openUserPosition
+// ----------
+
+export type OpenUserPositionIxAccounts = {
+	positionAuthority: PublicKey
+	whirlpool: PublicKey
+	vault: PublicKey
+	vaultPosition: PublicKey
+	userPosition: PublicKey
+	systemProgram: PublicKey
+}
+
+export type OpenUserPositionIxParams = {
+	accounts: OpenUserPositionIxAccounts
+}
+
+export const buildOpenUserPositionIx = async (
+	program: Program<SurfIDL>,
+	{ accounts }: OpenUserPositionIxParams,
+) => {
+	const ix = await program.methods.openUserPosition().accountsStrict(accounts).instruction()
+	return ix
+}
+
+// ----------
+// syncUserPosition
+// ----------
+
+export type SyncUserPositionIxAccounts = {
+	authority: PublicKey
+	vault: PublicKey
+	userPosition: PublicKey
+	currentVaultPosition: PublicKey
+}
+
+export type SyncUserPositionIxParams = {
+	accounts: SyncUserPositionIxAccounts
+}
+
+export const buildSyncUserPositionIx = async (
+	program: Program<SurfIDL>,
+	{ accounts }: SyncUserPositionIxParams,
+) => {
+	const ix = await program.methods.syncUserPosition().accountsStrict(accounts).instruction()
+	return ix
+}
+
+// ----------
+// collectUserFees
+// ----------
+
+export type CollectUserFeesIxAccounts = {
+	authority: PublicKey
+	authorityBaseTokenAccount: PublicKey
+	authorityQuoteTokenAccount: PublicKey
+	vault: PublicKey
+	vaultBaseTokenAccount: PublicKey
+	vaultQuoteTokenAccount: PublicKey
+	userPosition: PublicKey
+	tokenProgram: PublicKey
+}
+
+export type CollectUserFeesIxParams = {
+	accounts: CollectUserFeesIxAccounts
+}
+
+export const buildCollectUserFeesIx = async (
+	program: Program<SurfIDL>,
+	{ accounts }: CollectUserFeesIxParams,
+) => {
+	const ix = await program.methods.collectUserFees().accountsStrict(accounts).instruction()
 	return ix
 }
 
@@ -118,32 +227,30 @@ export type DepositLiquidityIxAccounts = {
 	payer: PublicKey
 	payerBaseTokenAccount: PublicKey
 	payerQuoteTokenAccount: PublicKey
-	prepareSwapWhirlpool: PublicKey
-	prepareSwapWhirlpoolBaseTokenVault: PublicKey
-	prepareSwapWhirlpoolQuoteTokenVault: PublicKey
-	prepareSwapTickArray0: PublicKey
-	prepareSwapTickArray1: PublicKey
-	prepareSwapTickArray2: PublicKey
-	prepareSwapOracle: PublicKey
+	userPosition: PublicKey
+	vaultPosition: PublicKey
 	vault: PublicKey
 	vaultBaseTokenAccount: PublicKey
 	vaultQuoteTokenAccount: PublicKey
-	userPosition: PublicKey
 	whirlpoolPosition: PublicKey
 	whirlpoolPositionTokenAccount: PublicKey
-	whirlpoolPositionTickArrayLower: PublicKey
-	whirlpoolPositionTickArrayUpper: PublicKey
 	whirlpool: PublicKey
-	whirlpoolBaseTokenVault: PublicKey
-	whirlpoolQuoteTokenVault: PublicKey
+	tickArrayLower: PublicKey
+	tickArrayUpper: PublicKey
+	swapWhirlpool: PublicKey
+	swapWhirlpoolBaseTokenAccount: PublicKey
+	swapWhirlpoolQuoteTokenAccount: PublicKey
+	tickArray0: PublicKey
+	tickArray1: PublicKey
+	tickArray2: PublicKey
+	swapOracle: PublicKey
 	whirlpoolProgram: PublicKey
 	tokenProgram: PublicKey
-	systemProgram: PublicKey
 }
 
 export type DepositLiquidityIxArgs = {
-	whirlpoolDepositQuoteAmount: BN
-	whirlpoolDepositQuoteAmountMax: BN
+	liquidityInput: BN
+	depositQuoteInputMax: BN
 }
 
 export type DepositLiquidityIxParams = {
@@ -156,55 +263,8 @@ export const buildDepositLiquidityIx = async (
 	{ accounts, args }: DepositLiquidityIxParams,
 ) => {
 	const ix = await program.methods
-		.depositLiquidity(args.whirlpoolDepositQuoteAmount, args.whirlpoolDepositQuoteAmountMax)
+		.depositLiquidity(args.liquidityInput, args.depositQuoteInputMax)
 		.accountsStrict(accounts)
 		.instruction()
-	return ix
-}
-
-// ----------
-// hedgeLiquidity
-// ----------
-
-export type HedgeLiquidityIxAccounts = {
-	payer: PublicKey
-	payerBaseTokenAccount: PublicKey
-	payerQuoteTokenAccount: PublicKey
-	userPosition: PublicKey
-	vault: PublicKey
-	vaultBaseTokenAccount: PublicKey
-	vaultQuoteTokenAccount: PublicKey
-	whirlpool: PublicKey
-	whirlpoolPosition: PublicKey
-	driftState: PublicKey
-	driftSigner: PublicKey
-	driftQuoteSpotMarketVault: PublicKey
-	driftBaseSpotMarketVault: PublicKey
-	driftBaseTokenOracle: PublicKey
-	driftBaseSpotMarket: PublicKey
-	driftQuoteSpotMarket: PublicKey
-	driftStats: PublicKey
-	driftSubaccount: PublicKey
-	hedgeSwapWhirlpool: PublicKey
-	hedgeSwapWhirlpoolBaseTokenVault: PublicKey
-	hedgeSwapWhirlpoolQuoteTokenVault: PublicKey
-	hedgeSwapTickArray0: PublicKey
-	hedgeSwapTickArray1: PublicKey
-	hedgeSwapTickArray2: PublicKey
-	hedgeSwapOracle: PublicKey
-	driftProgram: PublicKey
-	whirlpoolProgram: PublicKey
-	tokenProgram: PublicKey
-}
-
-export type HedgeLiquidityIxParams = {
-	accounts: HedgeLiquidityIxAccounts
-}
-
-export const buildHedgeLiquidityIx = async (
-	program: Program<SurfIDL>,
-	{ accounts }: HedgeLiquidityIxParams,
-) => {
-	const ix = await program.methods.hedgeLiquidity().accountsStrict(accounts).instruction()
 	return ix
 }

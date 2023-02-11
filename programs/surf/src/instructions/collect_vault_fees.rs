@@ -6,7 +6,7 @@ use whirlpools::{
 
 use crate::state::{Vault, VaultPosition};
 
-pub fn handler(ctx: Context<CollectFees>) -> Result<()> {
+pub fn handler(ctx: Context<CollectVaultFees>) -> Result<()> {
     let vault = &ctx.accounts.vault;
     let vault_base_token_account = &ctx.accounts.vault_base_token_account;
     let vault_quote_token_account = &ctx.accounts.vault_quote_token_account;
@@ -40,7 +40,7 @@ pub fn handler(ctx: Context<CollectFees>) -> Result<()> {
 }
 
 #[derive(Accounts)]
-pub struct CollectFees<'info> {
+pub struct CollectVaultFees<'info> {
     pub payer: Signer<'info>,
 
     #[account(mut)]

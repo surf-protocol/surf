@@ -8,8 +8,8 @@ import { DRIFT_PROGRAM_ID_MAINNET } from '../../sdk/ts/src/constants.js'
 import {
 	buildInitializeAdminConfigIx,
 	buildInitializeVaultIx,
-	buildOpenWhirlpoolPositionIx,
 	buildDepositLiquidityIx,
+	buildOpenVaultPositionIx,
 } from '../../sdk/ts/src/idl/instructions.js'
 import {
 	getAdminConfigProgramAddress,
@@ -102,6 +102,11 @@ export const mockVault = async (
 		vaultPDA,
 		vaultBaseTokenAccount,
 		vaultQuoteTokenAccount,
+		vaultRangeParams: {
+			fullTickRange,
+			vaultTickRange,
+			hedgeTickRange,
+		},
 	}
 }
 
@@ -116,7 +121,7 @@ type DepositLiquidityConfig = {
 	lowerTickIndex: number
 }
 
-export const mockVaultWhirlpoolPosition = async (
+export const mockVaultPosition = async (
 	vault: PublicKey,
 	whirlpool: PublicKey,
 	depositLiqConfig?: DepositLiquidityConfig,
@@ -128,7 +133,7 @@ export const mockVaultWhirlpoolPosition = async (
 		whirlpoolPositionVaultTokenAccount,
 	} = getVaultWhirlpoolPositionAccountsAddresses(vault)
 
-	const ix = await buildOpenWhirlpoolPositionIx(program, {
+	const ix = await buildOpenVaultPositionIx(program, {
 		args: {
 			positionBump: whirlpoolPositionBump,
 		},

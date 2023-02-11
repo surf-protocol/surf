@@ -14,7 +14,7 @@ use crate::{
     utils::orca::tick_math::{get_initializable_tick_index, MAX_TICK_INDEX, MIN_TICK_INDEX},
 };
 
-pub fn handler(ctx: Context<OpenPosition>, position_bump: u8) -> Result<()> {
+pub fn handler(ctx: Context<OpenVaultPosition>, position_bump: u8) -> Result<()> {
     if ctx.accounts.vault.current_vault_position_id != None {
         return Err(SurfError::PositionAlreadyOpen.into());
     }
@@ -38,9 +38,8 @@ pub fn handler(ctx: Context<OpenPosition>, position_bump: u8) -> Result<()> {
         return Err(SurfError::LowerTickIndexOutOfBounds.into());
     }
 
-    let whirlpool_cpi = ctx.accounts.get_open_whirlpool_position_context();
     whirlpool_cpi::open_position(
-        whirlpool_cpi,
+        ctx.accounts.open_whirlpool_position_context(),
         OpenPositionBumps { position_bump },
         tick_lower_initializable,
         tick_upper_initializable,
@@ -74,7 +73,7 @@ pub fn handler(ctx: Context<OpenPosition>, position_bump: u8) -> Result<()> {
 
 #[derive(Accounts)]
 #[instruction(position_bump: u8)]
-pub struct OpenPosition<'info> {
+pub struct OpenVaultPosition<'info> {
     #[account(mut)]
     pub payer: Signer<'info>,
 
@@ -127,8 +126,8 @@ pub struct OpenPosition<'info> {
     pub associated_token_program: Program<'info, AssociatedToken>,
 }
 
-impl<'info> OpenPosition<'info> {
-    pub fn get_open_whirlpool_position_context(
+impl<'info> OpenVaultPosition<'info> {
+    pub fn open_whirlpool_position_context(
         &self,
     ) -> CpiContext<'_, '_, '_, 'info, OpenWhirlpoolPosition<'info>> {
         let accounts = OpenWhirlpoolPosition {
@@ -136,7 +135,7 @@ impl<'info> OpenPosition<'info> {
             position: self.whirlpool_position.to_account_info(),
             position_mint: self.whirlpool_position_mint.to_account_info(),
             position_token_account: self.whirlpool_position_token_account.to_account_info(),
-            owner: self.vault.to_account_info(),
+            owner: self.vault_position.to_account_info(),
             whirlpool: self.whirlpool.to_account_info(),
             token_program: self.token_program.to_account_info(),
             system_program: self.system_program.to_account_info(),

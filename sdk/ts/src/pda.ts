@@ -2,6 +2,7 @@ import { getUserAccountPublicKeySync, getUserStatsAccountPublicKey } from '@drif
 import { ORCA_WHIRLPOOL_PROGRAM_ID, PDAUtil } from '@orca-so/whirlpools-sdk'
 import { getAssociatedTokenAddressSync } from '@solana/spl-token'
 import { Keypair, PublicKey } from '@solana/web3.js'
+import BN from 'bn.js'
 
 import { DRIFT_PROGRAM_ID_MAINNET, SURF_PROGRAM_ID } from './constants.js'
 
@@ -38,7 +39,7 @@ export const getVaultDriftAccountsAddresses = (
 }
 
 export const getVaultWhirlpoolPositionAccountsAddresses = (
-	vaultAddress: PublicKey,
+	vaultPositionAddress: PublicKey,
 	whirlpoolProgramId = ORCA_WHIRLPOOL_PROGRAM_ID,
 ) => {
 	const whirlpoolPositionMintKeyPair = new Keypair()
@@ -48,7 +49,7 @@ export const getVaultWhirlpoolPositionAccountsAddresses = (
 	)
 	const whirlpoolPositionVaultTokenAccount = getAssociatedTokenAddressSync(
 		whirlpoolPositionMintKeyPair.publicKey,
-		vaultAddress,
+		vaultPositionAddress,
 		true,
 	)
 	return {
@@ -57,6 +58,17 @@ export const getVaultWhirlpoolPositionAccountsAddresses = (
 		whirlpoolPositionPDA: publicKey,
 		whirlpoolPositionBump: bump,
 	}
+}
+
+export const getVaultPositionAddress = (vaultAddress: PublicKey, vaultPositionId: BN | number) => {
+	return PublicKey.findProgramAddressSync(
+		[
+			Buffer.from('vault_position', 'utf-8'),
+			vaultAddress.toBuffer(),
+			new BN(vaultPositionId).toArrayLike(Buffer, 'le', 8),
+		],
+		SURF_PROGRAM_ID,
+	)
 }
 
 export const getUserPositionAddress = (vaultAddress: PublicKey, ownerAddress: PublicKey) => {
