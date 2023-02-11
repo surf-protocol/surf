@@ -44,19 +44,19 @@ pub enum SurfError {
     #[msg("Whirlpool position does not correspond to vault whirlpool position")]
     InvalidWhirlpoolPosition,
 
-    #[msg("Position is not synce to current state, call sync_user_position first")]
-    PositionNotSynced,
-    #[msg("Whirlpool position is not open")]
-    PositionNotOpen,
-    #[msg("User position is already hedged")]
-    PositionAlreadyHedged,
+    #[msg("Position is not synced to current state, call sync_user_position first")]
+    UserPositionNotSynced,
 
+    #[msg("Vault position fees are not updated, call collect_vault_fees")]
+    VaultPositionNotUpdated,
     #[msg("Can not update user position without providing previous vault positions")]
     MissingPreviousVaultPositions,
 
     // Math
     #[msg("Input quote amount is too high")]
     BaseTokenOverflow,
+    #[msg("Liquidity overflow")]
+    LiquidityOverflow,
     #[msg("Liquidity diff is too high")]
     LiquidityDiffTooHigh,
 

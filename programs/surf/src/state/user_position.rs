@@ -77,18 +77,32 @@ impl UserPosition {
         self.hedge_loss_unclaimed_quote_token = 0;
     }
 
+    /// Update user_position fees and hedge losses
+    /// Updates
+    ///     - unclaimed token amounts
+    ///     - hedge losses and fee growths checkpoints
     pub fn update_fees_and_hedge_losses<'info>(
         &mut self,
         vault_position: &Account<'info, VaultPosition>,
     ) -> () {
+        // this is always invoked before mutating action so if liquidity is 0
+        // just exit early (can not collect fees / rewards without liquidity)
+        if self.liquidity == 0 {
+            return ();
+        }
+
+        // -----------
         // UPDATE FEES
+        let fee_growth_base_token = vault_position.fee_growth_base_token;
+        let fee_growth_quote_token = vault_position.fee_growth_quote_token;
         let (_fee_delta_base_token, _fee_delta_quote_token) = calculate_deltas(
             self.liquidity,
             self.fee_growth_checkpoint_base_token,
             self.fee_growth_checkpoint_quote_token,
-            vault_position.fee_growth_base_token,
-            vault_position.fee_growth_quote_token,
+            fee_growth_base_token,
+            fee_growth_quote_token,
         );
+
         self.fee_unclaimed_base_token = self
             .fee_unclaimed_base_token
             .wrapping_add(_fee_delta_base_token);
@@ -96,24 +110,36 @@ impl UserPosition {
             .fee_unclaimed_quote_token
             .wrapping_add(_fee_delta_quote_token);
 
+        self.fee_growth_checkpoint_base_token = fee_growth_base_token;
+        self.fee_growth_checkpoint_quote_token = fee_growth_quote_token;
+
         // UPDATE HEDGE LOSSES
         // For now assume position is hedged from deposit
-        // TODO: need to account for positions that were hedged after deposit
+        // TODO: need to account for positions that were hedged after deposit (Update checkpoints on hedge instruction)
+        let hedge_adjustment_loss_base_token = vault_position.hedge_adjustment_loss_base_token;
+        let hedge_adjustment_loss_quote_token = vault_position.hedge_adjustment_loss_quote_token;
+
         let (_hedge_delta_base_token, _hedge_delta_quote_token) = calculate_deltas(
             self.liquidity,
             self.hedge_adjustment_loss_checkpoint_base_token,
             self.hedge_adjustment_loss_checkpoint_quote_token,
-            vault_position.hedge_adjustment_loss_base_token,
-            vault_position.hedge_adjustment_loss_quote_token,
+            hedge_adjustment_loss_base_token,
+            hedge_adjustment_loss_quote_token,
         );
+
         self.hedge_loss_unclaimed_base_token = self
             .hedge_loss_unclaimed_base_token
             .wrapping_add(_hedge_delta_base_token);
         self.hedge_loss_unclaimed_quote_token = self
             .hedge_loss_unclaimed_quote_token
             .wrapping_add(_hedge_delta_quote_token);
+
+        self.hedge_adjustment_loss_checkpoint_base_token = hedge_adjustment_loss_base_token;
+        self.hedge_adjustment_loss_checkpoint_quote_token = hedge_adjustment_loss_quote_token;
     }
 
+    /// Update user_position liquidity to match the liquidity of next vault_position
+    /// **Does not update vault_position_checkpoint**
     pub fn update_range_adjustment_diff<'info>(
         &mut self,
         vault_liquidity: u128,

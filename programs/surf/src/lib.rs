@@ -32,14 +32,10 @@ pub mod surf {
 
     pub fn deposit_liquidity(
         ctx: Context<DepositLiquidity>,
-        whirlpool_deposit_quote_amount: u64,
-        whirlpool_deposit_quote_amount_max: u64,
+        liquidity_input: u128,
+        deposit_quote_input_max: u64,
     ) -> Result<()> {
-        deposit_liquidity::handler(
-            ctx,
-            whirlpool_deposit_quote_amount,
-            whirlpool_deposit_quote_amount_max,
-        )
+        deposit_liquidity::handler(ctx, liquidity_input, deposit_quote_input_max)
     }
 
     pub fn hedge_liquidity(ctx: Context<HedgeLiquidity>) -> Result<()> {
