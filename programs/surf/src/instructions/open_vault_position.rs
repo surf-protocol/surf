@@ -6,7 +6,6 @@ use whirlpools::{
     state::Whirlpool,
     OpenPositionBumps,
 };
-use whirlpools_client::math::sqrt_price_from_tick_index;
 
 use crate::{
     errors::SurfError,
@@ -16,7 +15,7 @@ use crate::{
 
 pub fn handler(ctx: Context<OpenVaultPosition>, position_bump: u8) -> Result<()> {
     if ctx.accounts.vault.current_vault_position_id != None {
-        return Err(SurfError::PositionAlreadyOpen.into());
+        return Err(SurfError::VaultPositionAlreadyOpen.into());
     }
 
     let full_tick_range = ctx.accounts.vault.full_tick_range;
@@ -45,9 +44,6 @@ pub fn handler(ctx: Context<OpenVaultPosition>, position_bump: u8) -> Result<()>
         tick_upper_initializable,
     )?;
 
-    let upper_sqrt_price = sqrt_price_from_tick_index(tick_upper_initializable);
-    let lower_sqrt_price = sqrt_price_from_tick_index(tick_lower_initializable);
-
     let vault = &mut ctx.accounts.vault;
     let vault_position_id = vault.vault_positions_count;
     let vault_position_bump = ctx.bumps.get("vault_position").unwrap();
@@ -60,8 +56,8 @@ pub fn handler(ctx: Context<OpenVaultPosition>, position_bump: u8) -> Result<()>
         0,
         whirlpool.fee_growth_global_a,
         whirlpool.fee_growth_global_b,
-        upper_sqrt_price,
-        lower_sqrt_price,
+        tick_upper_initializable,
+        tick_lower_initializable,
         current_tick_index,
         vault.vault_tick_range,
     );

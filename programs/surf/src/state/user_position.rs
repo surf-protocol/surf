@@ -14,7 +14,9 @@ pub struct UserPosition {
 
     pub liquidity: u128, // 16
 
-    pub is_hedged: bool,              // 1
+    // Store hedged liquidity to keep track of what part and if position is hedged
+    pub hedged_liquidity: u128,
+    // Store collateral and borrowed amounts to keep track how much can user withdraw
     pub collateral_quote_amount: u64, // 8
     pub borrow_base_amount: u64,      // 8
 
@@ -56,7 +58,7 @@ impl UserPosition {
 
         self.liquidity = liquidity;
 
-        self.is_hedged = false;
+        self.hedged_liquidity = 0;
         self.collateral_quote_amount = 0;
         self.borrow_base_amount = 0;
 
@@ -90,6 +92,12 @@ impl UserPosition {
         self.fee_growth_checkpoint_quote_token = vault_position.fee_growth_quote_token;
 
         Ok(())
+    }
+
+    pub fn hedge(&mut self, collateral_quote_amount: u64, borrow_base_amount: u64) -> () {
+        self.collateral_quote_amount = collateral_quote_amount;
+        self.borrow_base_amount = borrow_base_amount;
+        self.hedged_liquidity = self.liquidity;
     }
 
     /// Update user_position fees and hedge losses
@@ -220,32 +228,6 @@ pub fn calculate_deltas<'info>(
         checked_mul_shift_right(delta_quote_token_per_unit, liquidity).unwrap_or(0);
 
     (delta_base_token, delta_quote_token)
-}
-
-pub fn add_liquidity_diff(liquidity: u128, diff: u128, add_rem: bool) -> Result<u128> {
-    println!("d {} ; r {}", diff, add_rem);
-
-    let rem: u128 = if add_rem { 1 } else { 0 };
-    let diff_with_rem = diff.checked_add(rem).unwrap_or(0);
-
-    println!("{}", diff_with_rem);
-
-    let x = liquidity
-        .checked_add(diff)
-        .ok_or(SurfError::LiquidityDiffTooHigh)?;
-
-    Ok(x)
-}
-
-pub fn subtract_liquidity_diff(liquidity: u128, diff: u128, sub_rem: bool) -> Result<u128> {
-    let rem: u128 = if sub_rem { 1 } else { 0 };
-    let diff_with_rem = diff.checked_add(rem).unwrap_or(0);
-
-    let x = liquidity
-        .checked_sub(diff_with_rem)
-        .ok_or(SurfError::LiquidityDiffTooHigh)?;
-
-    Ok(x)
 }
 
 #[cfg(test)]

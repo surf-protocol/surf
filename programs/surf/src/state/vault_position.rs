@@ -1,5 +1,6 @@
 use anchor_lang::prelude::*;
 use whirlpools::Whirlpool;
+use whirlpools_client::math::sqrt_price_from_tick_index;
 
 use crate::errors::SurfError;
 
@@ -19,6 +20,7 @@ pub struct VaultPosition {
     pub close_sqrt_price: Option<u128>, // 24
     pub upper_sqrt_price: u128,         // 16
     pub lower_sqrt_price: u128,         // 16
+    pub middle_sqrt_price: u128,        // 16
 
     // Growths and losses are stored per one unit of liquidity
     // Fee growth at time of close of the whirlpool position
@@ -38,7 +40,7 @@ pub struct VaultPosition {
 }
 
 impl VaultPosition {
-    pub const LEN: usize = 8 + 248;
+    pub const LEN: usize = 8 + 272;
     pub const NAMESPACE: &'static [u8; 14] = b"vault_position";
 
     pub fn open(
@@ -52,8 +54,8 @@ impl VaultPosition {
         current_fee_growth_base_token: u128,
         current_fee_growth_quote_token: u128,
 
-        upper_sqrt_price: u128,
-        lower_sqrt_price: u128,
+        upper_tick_index: i32,
+        lower_tick_index: i32,
 
         current_tick_index: i32,
         vault_tick_range: u32,
@@ -66,6 +68,12 @@ impl VaultPosition {
 
         self.liquidity = liquidity;
 
+        let middle_tick_index = (upper_tick_index + lower_tick_index) / 2;
+        let middle_sqrt_price = sqrt_price_from_tick_index(middle_tick_index);
+        let upper_sqrt_price = sqrt_price_from_tick_index(upper_tick_index);
+        let lower_sqrt_price = sqrt_price_from_tick_index(lower_tick_index);
+
+        self.middle_sqrt_price = middle_sqrt_price;
         self.upper_sqrt_price = upper_sqrt_price;
         self.lower_sqrt_price = lower_sqrt_price;
         self.close_sqrt_price = None;

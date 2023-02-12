@@ -26,8 +26,8 @@ pub enum SurfError {
 
     #[msg("Position can not be open on inactive vault")]
     PositionCanNotBeOpen,
-    #[msg("Position is already open")]
-    PositionAlreadyOpen,
+    #[msg("Vault position is already fully hedged")]
+    PositionAlreadyHedged,
     #[msg("Invalid vault position id")]
     InvalidVaultPositionId,
     #[msg("Lower tick index is lower than -443636")]
@@ -47,6 +47,8 @@ pub enum SurfError {
     #[msg("Position is not synced to current state, call sync_user_position first")]
     UserPositionNotSynced,
 
+    #[msg("Position is already open")]
+    VaultPositionAlreadyOpen,
     #[msg("Provided vault position is not opened")]
     VaultPositionNotOpened,
     #[msg("Vault position fees are not updated, call collect_vault_fees")]
