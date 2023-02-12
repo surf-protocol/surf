@@ -25,13 +25,6 @@ pub fn handler(
     // TODO: try to use better slippage checks
     deposit_quote_input_max: u64,
 ) -> Result<()> {
-    // UPDATE USER POSITION
-    if ctx.accounts.user_position.liquidity != 0 {
-        ctx.accounts
-            .user_position
-            .update_fees_and_hedge_losses(&ctx.accounts.vault_position);
-    }
-
     let vault_position = &ctx.accounts.vault_position;
 
     let lower_sqrt_price = vault_position.lower_sqrt_price;
@@ -72,9 +65,8 @@ pub fn handler(
     let mut real_base_input = estimated_base_input;
     let mut real_quote_input = estimated_quote_input;
 
-    let whirlpool = &mut ctx.accounts.whirlpool;
-
-    if whirlpool.key() == ctx.accounts.swap_whirlpool.key() {
+    if ctx.accounts.whirlpool.key() == ctx.accounts.swap_whirlpool.key() {
+        let whirlpool = &mut ctx.accounts.whirlpool;
         whirlpool.reload()?;
         real_liquidity_input = get_liquidity_from_base_token(
             real_base_input,
@@ -124,28 +116,34 @@ pub fn handler(
         real_quote_input,
     )?;
 
-    // TODO: Update checkpoints user post deposit
     // DEPOSIT LIQUIDITY
     whirlpool_cpi::increase_liquidity(
         ctx.accounts.whirlpool_deposit_context(),
         real_liquidity_input,
         real_base_input,
         real_quote_input,
-    )?;
+    )?; // -> updates fees and rewards
+
+    // UPDATE VAULT AND USER POSITION
+    // happens after increase_liquidity cpi so no need to update fees and rewards manually
+    // even if the swap whirlpool was the same as liquidity whirlpool
+    let whirlpool = &mut ctx.accounts.whirlpool;
+    whirlpool.reload()?;
+
+    ctx.accounts
+        .vault_position
+        .deposit_liquidity(whirlpool, real_liquidity_input)?;
+
+    if ctx.accounts.user_position.liquidity != 0 {
+        ctx.accounts
+            .user_position
+            .update_fees_and_hedge_losses(&ctx.accounts.vault_position);
+    }
 
     // UPDATE USER POSITION
     ctx.accounts
         .user_position
-        .liquidity
-        .checked_add(real_liquidity_input)
-        .ok_or(SurfError::LiquidityOverflow)?;
-
-    // UPDATE VAULT POSITION
-    ctx.accounts
-        .vault_position
-        .liquidity
-        .checked_add(real_liquidity_input)
-        .ok_or(SurfError::LiquidityOverflow)?;
+        .deposit_liquidity(real_liquidity_input, &ctx.accounts.vault_position)?;
 
     Ok(())
 }

@@ -77,6 +77,21 @@ impl UserPosition {
         self.hedge_loss_unclaimed_quote_token = 0;
     }
 
+    pub fn deposit_liquidity<'info>(
+        &mut self,
+        liquidity_diff: u128,
+        vault_position: &Account<'info, VaultPosition>,
+    ) -> Result<()> {
+        self.liquidity
+            .checked_add(liquidity_diff)
+            .ok_or(SurfError::LiquidityOverflow)?;
+
+        self.fee_growth_checkpoint_base_token = vault_position.fee_growth_base_token;
+        self.fee_growth_checkpoint_quote_token = vault_position.fee_growth_quote_token;
+
+        Ok(())
+    }
+
     /// Update user_position fees and hedge losses
     /// Updates
     ///     - unclaimed token amounts

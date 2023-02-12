@@ -4,43 +4,32 @@ use whirlpools::{
     program::Whirlpool as WhirlpoolProgram, Position as WhirlpoolPosition, TickArray, Whirlpool,
 };
 
-use crate::state::{Vault, VaultPosition};
+use crate::{
+    helpers::vault::sync_vault,
+    state::{Vault, VaultPosition},
+};
 
-pub fn handler(ctx: Context<CollectVaultFees>) -> Result<()> {
-    let vault = &ctx.accounts.vault;
-    let vault_base_token_account = &ctx.accounts.vault_base_token_account;
-    let vault_quote_token_account = &ctx.accounts.vault_quote_token_account;
-    let vault_position = &mut ctx.accounts.vault_position;
-    let mut whirlpool = &mut ctx.accounts.whirlpool;
-    let whirlpool_position = &ctx.accounts.whirlpool_position;
-    let whirlpool_program = &ctx.accounts.whirlpool_program;
-    let token_program = &ctx.accounts.token_program;
-
-    vault_position.update_fees_and_rewards(
-        &mut whirlpool,
-        whirlpool_position,
-        &ctx.accounts.tick_array_lower,
-        &ctx.accounts.tick_array_upper,
-        whirlpool_program,
-    )?;
-    vault_position.transfer_fees_and_rewards_to_vault(
-        whirlpool,
+pub fn handler(ctx: Context<SyncVault>) -> Result<()> {
+    sync_vault(
+        &mut ctx.accounts.vault_position,
+        &ctx.accounts.vault_base_token_account,
+        &ctx.accounts.vault_quote_token_account,
+        &mut ctx.accounts.whirlpool,
         &ctx.accounts.whirlpool_base_token_vault,
         &ctx.accounts.whirlpool_quote_token_vault,
-        vault,
-        vault_base_token_account,
-        vault_quote_token_account,
-        whirlpool_position,
+        &ctx.accounts.whirlpool_position,
         &ctx.accounts.whirlpool_position_token_account,
-        token_program,
-        whirlpool_program,
+        &ctx.accounts.tick_array_lower,
+        &ctx.accounts.tick_array_upper,
+        &ctx.accounts.whirlpool_program,
+        &ctx.accounts.token_program,
     )?;
 
     Ok(())
 }
 
 #[derive(Accounts)]
-pub struct CollectVaultFees<'info> {
+pub struct SyncVault<'info> {
     pub payer: Signer<'info>,
 
     #[account(mut)]

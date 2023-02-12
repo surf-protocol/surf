@@ -3,6 +3,7 @@ use anchor_lang::prelude::*;
 declare_id!("4wVrbfSHxmhevzPzNfdpmVkJ2jqNRy6RYt4TxcHsnfSo");
 
 pub mod errors;
+pub mod helpers;
 pub mod instructions;
 pub mod state;
 pub mod utils;
@@ -30,8 +31,8 @@ pub mod surf {
         open_vault_position::handler(ctx, position_bump)
     }
 
-    pub fn collect_vault_fees(ctx: Context<CollectVaultFees>) -> Result<()> {
-        collect_vault_fees::handler(ctx)
+    pub fn sync_vault(ctx: Context<SyncVault>) -> Result<()> {
+        sync_vault::handler(ctx)
     }
 
     pub fn open_user_position(ctx: Context<OpenUserPosition>) -> Result<()> {
