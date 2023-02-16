@@ -12,21 +12,21 @@ pub fn handler(ctx: Context<OpenUserPosition>) -> Result<()> {
     let vault_position = &ctx.accounts.vault_position;
 
     if vault.current_vault_position_id == None {
-        return Err(SurfError::PositionCanNotBeOpen.into());
+        return Err(SurfError::UserPositionCanNotBeOpen.into());
     }
 
     let user_position_bump = *ctx.bumps.get("user_position").unwrap();
 
-    ctx.accounts.user_position.open(
-        user_position_bump,
-        vault.key(),
-        0,
-        vault.current_vault_position_id.unwrap(),
-        whirlpool.fee_growth_global_a,
-        whirlpool.fee_growth_global_b,
-        vault_position.hedge_adjustment_loss_base_token,
-        vault_position.hedge_adjustment_loss_quote_token,
-    );
+    // ctx.accounts.user_position.open(
+    //     user_position_bump,
+    //     vault.key(),
+    //     0,
+    //     vault.current_vault_position_id.unwrap(),
+    //     whirlpool.fee_growth_global_a,
+    //     whirlpool.fee_growth_global_b,
+    //     vault_position.hedge_adjustment_loss_base_token,
+    //     vault_position.hedge_adjustment_loss_quote_token,
+    // );
 
     Ok(())
 }

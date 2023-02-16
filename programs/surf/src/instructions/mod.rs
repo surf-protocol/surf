@@ -1,3 +1,4 @@
+pub mod adjust_vault_hedge;
 pub mod collect_user_fees;
 pub mod deposit_liquidity;
 pub mod hedge_liquidity;
@@ -8,6 +9,7 @@ pub mod open_vault_position;
 pub mod sync_user_position;
 pub mod sync_vault;
 
+pub use adjust_vault_hedge::*;
 pub use collect_user_fees::*;
 pub use deposit_liquidity::*;
 pub use hedge_liquidity::*;

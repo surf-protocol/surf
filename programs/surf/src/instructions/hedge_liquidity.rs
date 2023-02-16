@@ -23,20 +23,19 @@ use crate::{
     errors::SurfError,
     state::{UserPosition, Vault, VaultPosition},
     utils::{
-        constraints::have_matching_mints,
+        constraints::{have_matching_mints, is_user_position_synced},
         orca::liquidity_math::{get_amount_delta_a_wrapped, get_amount_delta_b_wrapped},
     },
 };
 
 pub fn handler(ctx: Context<HedgeLiquidity>) -> Result<()> {
-    // TODO: hedge only unhedged liquidity if there is any
     let vault_position = &ctx.accounts.vault_position;
     let user_position = &ctx.accounts.user_position;
 
     let unhedged_liquidity = user_position.liquidity - user_position.hedged_liquidity;
 
     if unhedged_liquidity == 0 {
-        return Err(SurfError::PositionAlreadyHedged.into());
+        return Err(SurfError::UserPositionAlreadyHedged.into());
     }
 
     // TRANSFER COLLATERAL FROM USER TO VAULT
@@ -46,20 +45,20 @@ pub fn handler(ctx: Context<HedgeLiquidity>) -> Result<()> {
         unhedged_liquidity,
         true,
     )?;
-    let total_collateral = quote_token_amount * 2;
+    let unhedged_collateral = quote_token_amount * 2;
 
-    token_cpi::transfer(ctx.accounts.transfer_context(), total_collateral)?;
+    token_cpi::transfer(ctx.accounts.transfer_context(), unhedged_collateral)?;
 
     // DEPOSIT COLLATERAL TO DRIFT
     drift_cpi::deposit(
         ctx.accounts.deposit_collateral_context(),
         0_u16,
-        total_collateral,
+        unhedged_collateral,
         false,
     )?;
 
     // BORROW FROM DRIFT
-    let current_base_token_amount = get_amount_delta_a_wrapped(
+    let unhedged_base_token_amount = get_amount_delta_a_wrapped(
         vault_position.upper_sqrt_price,
         ctx.accounts.whirlpool.sqrt_price,
         unhedged_liquidity,
@@ -69,23 +68,45 @@ pub fn handler(ctx: Context<HedgeLiquidity>) -> Result<()> {
     drift_cpi::withdraw(
         ctx.accounts.borrow_context(),
         1_u16,
-        current_base_token_amount,
+        unhedged_base_token_amount,
         false,
     )?;
 
     // SWAP BORROWED AMOUNT
     whirlpool_cpi::swap(
         ctx.accounts.hedge_swap_context(),
-        current_base_token_amount,
+        unhedged_base_token_amount,
         0,
         MIN_SQRT_PRICE_X64,
         true,
         true,
     )?;
 
+    // UPDATE HEDGE LOSSES AND HEDGE
+    let vault_quote_token_account = &mut ctx.accounts.vault_quote_token_account;
+    let pre_hedge_vault_quote_token_amount = vault_quote_token_account.amount;
+    vault_quote_token_account.reload()?;
+    let post_hedge_vault_quote_token_amount = vault_quote_token_account.amount;
+
+    let notional_borrowed_amount =
+        post_hedge_vault_quote_token_amount - pre_hedge_vault_quote_token_amount;
+
     ctx.accounts
         .user_position
-        .hedge(total_collateral, current_base_token_amount);
+        .update_fees_and_hedge_losses(vault_position);
+
+    ctx.accounts.user_position.hedge(
+        unhedged_collateral,
+        unhedged_base_token_amount,
+        notional_borrowed_amount,
+    );
+
+    ctx.accounts.vault_position.hedge_liquidity(
+        unhedged_liquidity,
+        unhedged_collateral,
+        unhedged_base_token_amount,
+        notional_borrowed_amount,
+    );
 
     Ok(())
 }
@@ -108,6 +129,7 @@ pub struct HedgeLiquidity<'info> {
             owner.key().as_ref(),
         ],
         bump = user_position.bump,
+        constraint = is_user_position_synced(&user_position, &vault),
     )]
     pub user_position: Box<Account<'info, UserPosition>>,
 

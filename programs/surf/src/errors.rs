@@ -24,10 +24,6 @@ pub enum SurfError {
     #[msg("Hegde tick range should be lower than vault tick range")]
     HedgeTickRangeTooBig,
 
-    #[msg("Position can not be open on inactive vault")]
-    PositionCanNotBeOpen,
-    #[msg("Vault position is already fully hedged")]
-    PositionAlreadyHedged,
     #[msg("Invalid vault position id")]
     InvalidVaultPositionId,
     #[msg("Lower tick index is lower than -443636")]
@@ -44,9 +40,15 @@ pub enum SurfError {
     #[msg("Whirlpool position does not correspond to vault whirlpool position")]
     InvalidWhirlpoolPosition,
 
+    #[msg("Position can not be open on inactive vault")]
+    UserPositionCanNotBeOpen,
+    #[msg("Vault position is already fully hedged")]
+    UserPositionAlreadyHedged,
     #[msg("Position is not synced to current state, call sync_user_position first")]
     UserPositionNotSynced,
 
+    #[msg("Can not adjust hedge of position with 0 hedged liquidity")]
+    VaultPositionNotHedged,
     #[msg("Position is already open")]
     VaultPositionAlreadyOpen,
     #[msg("Provided vault position is not opened")]

@@ -48,12 +48,11 @@ pub fn handler(ctx: Context<OpenVaultPosition>, position_bump: u8) -> Result<()>
     let vault_position_id = vault.vault_positions_count;
     let vault_position_bump = ctx.bumps.get("vault_position").unwrap();
 
-    ctx.accounts.vault_position.open(
+    ctx.accounts.vault_position.open_new(
         *vault_position_bump,
         vault.key(),
         ctx.accounts.whirlpool_position.key(),
         vault_position_id,
-        0,
         whirlpool.fee_growth_global_a,
         whirlpool.fee_growth_global_b,
         tick_upper_initializable,

@@ -17,6 +17,11 @@ pub struct VaultPosition {
 
     pub liquidity: u128, // 16
 
+    pub hedged_liquidity: u128,             // 16
+    pub collateral_quote_amount: u64,       // 8
+    pub borrowed_base_amount: u64,          // 8
+    pub borrowed_base_amount_notional: u64, // 8
+
     pub close_sqrt_price: Option<u128>, // 24
     pub upper_sqrt_price: u128,         // 16
     pub lower_sqrt_price: u128,         // 16
@@ -27,12 +32,11 @@ pub struct VaultPosition {
     pub fee_growth_base_token: u128,  // 16
     pub fee_growth_quote_token: u128, // 16
 
-    // Total vault liquidity from range_adjustment
-    pub range_adjustment_liquidity_diff: i128,
+    // Total vault liquidity diff from range_adjustment
+    pub range_adjustment_liquidity_diff: i128, // 16
 
-    // Loss from hedge adjustments swaps per one unit of liquidity
-    pub hedge_adjustment_loss_base_token: u128,  // 16
-    pub hedge_adjustment_loss_quote_token: u128, // 16
+    // Total vault notional token diff from hedge adjustments
+    pub borrowed_base_amount_notional_diff: i64, // 8
 
     pub vault_upper_tick_index: i32,                   // 4
     pub vault_lower_tick_index: i32,                   // 4
@@ -40,7 +44,7 @@ pub struct VaultPosition {
 }
 
 impl VaultPosition {
-    pub const LEN: usize = 8 + 272;
+    pub const LEN: usize = 8 + 280;
     pub const NAMESPACE: &'static [u8; 14] = b"vault_position";
 
     pub fn open(
@@ -49,7 +53,13 @@ impl VaultPosition {
         vault: Pubkey,
         whirlpool_position: Pubkey,
         id: u64,
+
         liquidity: u128,
+
+        hedged_liquidity: u128,
+        collateral_quote_amount: u64,
+        borrowed_base_amount: u64,
+        borrowed_base_amount_notional: u64,
 
         current_fee_growth_base_token: u128,
         current_fee_growth_quote_token: u128,
@@ -67,6 +77,11 @@ impl VaultPosition {
         self.is_closed = false;
 
         self.liquidity = liquidity;
+        self.hedged_liquidity = hedged_liquidity;
+
+        self.collateral_quote_amount = collateral_quote_amount;
+        self.borrowed_base_amount = borrowed_base_amount;
+        self.borrowed_base_amount_notional = borrowed_base_amount_notional;
 
         let middle_tick_index = (upper_tick_index + lower_tick_index) / 2;
         let middle_sqrt_price = sqrt_price_from_tick_index(middle_tick_index);
@@ -83,14 +98,47 @@ impl VaultPosition {
 
         // Can be initialized to zero because it is specific to vault position
         self.range_adjustment_liquidity_diff = 0;
-
-        self.hedge_adjustment_loss_base_token = 0;
-        self.hedge_adjustment_loss_quote_token = 0;
+        self.borrowed_base_amount_notional_diff = 0;
 
         let half_vault_range = (vault_tick_range as i32) / 2;
         self.vault_upper_tick_index = current_tick_index + half_vault_range;
         self.vault_lower_tick_index = current_tick_index - half_vault_range;
         self.last_hedge_adjustment_tick_index = None;
+    }
+
+    pub fn open_new(
+        &mut self,
+        bump: u8,
+        vault: Pubkey,
+        whirlpool_position: Pubkey,
+        id: u64,
+
+        current_fee_growth_base_token: u128,
+        current_fee_growth_quote_token: u128,
+
+        upper_tick_index: i32,
+        lower_tick_index: i32,
+
+        current_tick_index: i32,
+        vault_tick_range: u32,
+    ) -> () {
+        self.open(
+            bump,
+            vault,
+            whirlpool_position,
+            id,
+            0,
+            0,
+            0,
+            0,
+            0,
+            current_fee_growth_base_token,
+            current_fee_growth_quote_token,
+            upper_tick_index,
+            lower_tick_index,
+            current_tick_index,
+            vault_tick_range,
+        );
     }
 
     /// Updates fee growths to match current whirlpool fee growths
@@ -106,12 +154,51 @@ impl VaultPosition {
         whirlpool: &Account<'info, Whirlpool>,
         liquidity_input: u128,
     ) -> Result<()> {
-        self.liquidity
+        self.liquidity = self
+            .liquidity
             .checked_add(liquidity_input)
             .ok_or(SurfError::LiquidityOverflow)?;
 
         self.update_fee_growths(whirlpool);
 
         Ok(())
+    }
+
+    pub fn hedge_liquidity(
+        &mut self,
+        hedged_liquidity_input: u128,
+        collateral_quote_amount: u64,
+        borrowed_base_amount: u64,
+        borrowed_base_amount_notional: u64,
+    ) -> () {
+        // No need to check for overflows, only possible to hedge what has already been checked on deposited
+        self.hedged_liquidity = self.hedged_liquidity + hedged_liquidity_input;
+        self.collateral_quote_amount = self.collateral_quote_amount + collateral_quote_amount;
+        self.borrowed_base_amount = self.borrowed_base_amount + borrowed_base_amount;
+        self.borrowed_base_amount_notional =
+            self.borrowed_base_amount_notional + borrowed_base_amount_notional;
+    }
+
+    pub fn adjust_hedge(
+        &mut self,
+        borrowed_base_amount_diff: i64,
+        borrowed_base_amount_notional_diff: i64,
+    ) -> () {
+        self.borrowed_base_amount_notional_diff =
+            self.borrowed_base_amount_notional_diff + borrowed_base_amount_notional_diff;
+
+        let borrowed_base_amount = borrowed_base_amount_diff.unsigned_abs();
+        let borrowed_base_amount_notional_diff_abs =
+            borrowed_base_amount_notional_diff.unsigned_abs();
+
+        if borrowed_base_amount_notional_diff > 0 {
+            self.borrowed_base_amount =
+                self.borrowed_base_amount + borrowed_base_amount_notional_diff_abs;
+            self.borrowed_base_amount = self.borrowed_base_amount - borrowed_base_amount;
+        } else {
+            self.borrowed_base_amount =
+                self.borrowed_base_amount - borrowed_base_amount_notional_diff_abs;
+            self.borrowed_base_amount = self.borrowed_base_amount + borrowed_base_amount;
+        }
     }
 }

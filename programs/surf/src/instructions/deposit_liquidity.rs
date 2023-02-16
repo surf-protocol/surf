@@ -14,7 +14,7 @@ use crate::{
     errors::SurfError,
     state::{UserPosition, Vault, VaultPosition},
     utils::{
-        constraints::{have_matching_mints, is_vault_position_open, is_vault_position_updated},
+        constraints::{have_matching_mints, is_user_position_synced, is_vault_position_open},
         orca::liquidity_math::{get_liquidity_from_base_token, get_whirlpool_tokens_deltas},
     },
 };
@@ -167,7 +167,7 @@ pub struct DepositLiquidity<'info> {
 
     #[account(
         mut,
-        constraint = user_position.vault_position_checkpoint == vault.vault_positions_count @SurfError::UserPositionNotSynced,
+        constraint = is_user_position_synced(&user_position, &vault) @SurfError::UserPositionNotSynced,
         seeds = [
             UserPosition::NAMESPACE.as_ref(),
             vault.key().as_ref(),
@@ -181,7 +181,6 @@ pub struct DepositLiquidity<'info> {
         mut,
         constraint = vault_position.vault.eq(&vault.key()),
         constraint = vault_position.id == vault.vault_positions_count,
-        constraint = is_vault_position_updated(&vault_position, &whirlpool) @SurfError::VaultPositionNotUpdated,
         constraint = is_vault_position_open(&vault_position) @SurfError::VaultPositionNotOpened,
         has_one = whirlpool_position,
     )]

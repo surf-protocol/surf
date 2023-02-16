@@ -17,8 +17,9 @@ pub struct UserPosition {
     // Store hedged liquidity to keep track of what part and if position is hedged
     pub hedged_liquidity: u128,
     // Store collateral and borrowed amounts to keep track how much can user withdraw
-    pub collateral_quote_amount: u64, // 8
-    pub borrow_base_amount: u64,      // 8
+    pub collateral_quote_amount: u64,  // 8
+    pub borrowed_base_amount: u64,     // 8
+    pub notional_borrowed_amount: u64, // 8
 
     /// Id of active vault position at time of last sync
     pub vault_position_checkpoint: u64, // 8
@@ -60,7 +61,8 @@ impl UserPosition {
 
         self.hedged_liquidity = 0;
         self.collateral_quote_amount = 0;
-        self.borrow_base_amount = 0;
+        self.borrowed_base_amount = 0;
+        self.notional_borrowed_amount = 0;
 
         self.vault_position_checkpoint = current_vault_position_id;
 
@@ -84,7 +86,8 @@ impl UserPosition {
         liquidity_diff: u128,
         vault_position: &Account<'info, VaultPosition>,
     ) -> Result<()> {
-        self.liquidity
+        self.liquidity = self
+            .liquidity
             .checked_add(liquidity_diff)
             .ok_or(SurfError::LiquidityOverflow)?;
 
@@ -94,9 +97,15 @@ impl UserPosition {
         Ok(())
     }
 
-    pub fn hedge(&mut self, collateral_quote_amount: u64, borrow_base_amount: u64) -> () {
-        self.collateral_quote_amount = collateral_quote_amount;
-        self.borrow_base_amount = borrow_base_amount;
+    pub fn hedge<'info>(
+        &mut self,
+        collateral_quote_amount: u64,
+        borrowed_base_amount: u64,
+        notional_borrowed_amount: u64,
+    ) -> () {
+        self.collateral_quote_amount = self.collateral_quote_amount + collateral_quote_amount;
+        self.borrowed_base_amount = self.borrowed_base_amount + borrowed_base_amount;
+        self.notional_borrowed_amount = self.notional_borrowed_amount + notional_borrowed_amount;
         self.hedged_liquidity = self.liquidity;
     }
 
@@ -139,26 +148,26 @@ impl UserPosition {
         // UPDATE HEDGE LOSSES
         // For now assume position is hedged from deposit
         // TODO: need to account for positions that were hedged after deposit (Update checkpoints on hedge instruction)
-        let hedge_adjustment_loss_base_token = vault_position.hedge_adjustment_loss_base_token;
-        let hedge_adjustment_loss_quote_token = vault_position.hedge_adjustment_loss_quote_token;
+        // let hedge_adjustment_loss_base_token = vault_position.hedge_adjustment_loss_base_token;
+        // let hedge_adjustment_loss_quote_token = vault_position.hedge_adjustment_loss_quote_token;
 
-        let (_hedge_delta_base_token, _hedge_delta_quote_token) = calculate_deltas(
-            self.liquidity,
-            self.hedge_adjustment_loss_checkpoint_base_token,
-            self.hedge_adjustment_loss_checkpoint_quote_token,
-            hedge_adjustment_loss_base_token,
-            hedge_adjustment_loss_quote_token,
-        );
+        // let (_hedge_delta_base_token, _hedge_delta_quote_token) = calculate_deltas(
+        //     self.liquidity,
+        //     self.hedge_adjustment_loss_checkpoint_base_token,
+        //     self.hedge_adjustment_loss_checkpoint_quote_token,
+        //     hedge_adjustment_loss_base_token,
+        //     hedge_adjustment_loss_quote_token,
+        // );
 
-        self.hedge_loss_unclaimed_base_token = self
-            .hedge_loss_unclaimed_base_token
-            .wrapping_add(_hedge_delta_base_token);
-        self.hedge_loss_unclaimed_quote_token = self
-            .hedge_loss_unclaimed_quote_token
-            .wrapping_add(_hedge_delta_quote_token);
+        // self.hedge_loss_unclaimed_base_token = self
+        //     .hedge_loss_unclaimed_base_token
+        //     .wrapping_add(_hedge_delta_base_token);
+        // self.hedge_loss_unclaimed_quote_token = self
+        //     .hedge_loss_unclaimed_quote_token
+        //     .wrapping_add(_hedge_delta_quote_token);
 
-        self.hedge_adjustment_loss_checkpoint_base_token = hedge_adjustment_loss_base_token;
-        self.hedge_adjustment_loss_checkpoint_quote_token = hedge_adjustment_loss_quote_token;
+        // self.hedge_adjustment_loss_checkpoint_base_token = hedge_adjustment_loss_base_token;
+        // self.hedge_adjustment_loss_checkpoint_quote_token = hedge_adjustment_loss_quote_token;
     }
 
     /// Update user_position liquidity to match the liquidity of next vault_position
