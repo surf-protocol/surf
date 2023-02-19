@@ -1,29 +1,23 @@
 use anchor_lang::prelude::*;
-use anchor_spl::token::{Token, TokenAccount};
+use drift::{state::spot_market::SpotMarket, state::user::User};
 use whirlpools::{
-    cpi::{
-        self as whirlpool_cpi,
-        accounts::{CollectFees, UpdateFeesAndRewards},
-    },
+    cpi::{self as whirlpool_cpi, accounts::UpdateFeesAndRewards},
     program::Whirlpool as WhirlpoolProgram,
     Position as WhirlpoolPosition, TickArray, Whirlpool,
 };
 
-use crate::state::VaultPosition;
+use crate::{
+    state::{HedgePosition, VaultState, WhirlpoolPosition as VaultWhirlpoolPosition},
+    utils::drift::get_interest,
+};
 
-pub fn sync_vault<'info>(
-    vault_position: &mut Account<'info, VaultPosition>,
-    vault_base_token_account: &Account<'info, TokenAccount>,
-    vault_quote_token_account: &Account<'info, TokenAccount>,
+pub fn sync_whirlpool_position<'info>(
+    vault_whirlpool_position: &mut Account<'info, VaultWhirlpoolPosition>,
     whirlpool: &mut Account<'info, Whirlpool>,
-    whirlpool_base_token_vault: &Account<'info, TokenAccount>,
-    whirlpool_quote_token_vault: &Account<'info, TokenAccount>,
     whirlpool_position: &Account<'info, WhirlpoolPosition>,
-    whirlpool_position_token_account: &Account<'info, TokenAccount>,
     tick_array_lower: &AccountLoader<'info, TickArray>,
     tick_array_upper: &AccountLoader<'info, TickArray>,
     whirlpool_program: &Program<'info, WhirlpoolProgram>,
-    token_program: &Program<'info, Token>,
 ) -> Result<()> {
     whirlpool_cpi::update_fees_and_rewards(CpiContext::new(
         whirlpool_program.to_account_info(),
@@ -35,28 +29,37 @@ pub fn sync_vault<'info>(
         },
     ))?;
 
-    // TODO: Collecting fees can be separated, has to happen when user collects fees
-    whirlpool_cpi::collect_fees(CpiContext::new(
-        whirlpool_program.to_account_info(),
-        CollectFees {
-            whirlpool: whirlpool.to_account_info(),
-            token_vault_a: whirlpool_base_token_vault.to_account_info(),
-            token_vault_b: whirlpool_quote_token_vault.to_account_info(),
-            position_authority: vault_position.to_account_info(),
-            token_owner_account_a: vault_base_token_account.to_account_info(),
-            token_owner_account_b: vault_quote_token_account.to_account_info(),
-            position: whirlpool_position.to_account_info(),
-            position_token_account: whirlpool_position_token_account.to_account_info(),
-            token_program: token_program.to_account_info(),
-        },
-    ))?;
-
-    // TODO: Collect rewards
-
     whirlpool.reload()?;
 
-    vault_position.fee_growth_base_token = whirlpool.fee_growth_global_a;
-    vault_position.fee_growth_quote_token = whirlpool.fee_growth_global_b;
+    vault_whirlpool_position.base_token_fee_growth = whirlpool.fee_growth_global_a;
+    vault_whirlpool_position.quote_token_fee_growth = whirlpool.fee_growth_global_b;
+
+    Ok(())
+}
+
+pub fn sync_interest_growths<'info>(
+    vault_state: &mut Account<'info, VaultState>,
+    hedge_position: &mut HedgePosition,
+    drift_subaccount: &User,
+    collateral_spot_market: &SpotMarket,
+    borrow_spot_market: &SpotMarket,
+) -> Result<()> {
+    let collateral_interest = get_interest(
+        vault_state.collateral_amount,
+        drift_subaccount,
+        collateral_spot_market,
+        crate::utils::drift::DriftMarket::Collateral,
+    )?;
+    vault_state.update_interest_growth(collateral_interest << 64);
+
+    let current_hedge_position = hedge_position.get_current_position();
+    let borrow_interest = get_interest(
+        current_hedge_position.borrowed_amount,
+        drift_subaccount,
+        borrow_spot_market,
+        crate::utils::drift::DriftMarket::Borrow,
+    )?;
+    hedge_position.update_interest_growth(borrow_interest << 64);
 
     Ok(())
 }

@@ -61,6 +61,11 @@ pub enum SurfError {
     #[msg("Can not update user position without providing previous vault positions")]
     MissingPreviousVaultPositions,
 
+    #[msg("Collateral interest overflow")]
+    CollateralInterestOverflow,
+    #[msg("Borrow interest overflow")]
+    BorrowInterestOverflow,
+
     // Math
     #[msg("Input quote amount is too high")]
     BaseTokenOverflow,
@@ -79,4 +84,8 @@ pub enum SurfError {
     MultiplicationOverflow,
     #[msg("Multiplication with shift right overflow")]
     MultiplicationShiftRightOverflow,
+
+    // Drift Errors
+    #[msg("Drift math error")]
+    MathError,
 }

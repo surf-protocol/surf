@@ -126,7 +126,7 @@ impl<'info> OpenWhirlpoolPosition<'info> {
         let program = &self.whirlpool_program;
         let accounts = OpenPosition {
             funder: self.admin.to_account_info(),
-            owner: self.vault_whirlpool_position.to_account_info(),
+            owner: self.vault_state.to_account_info(),
             position: self.whirlpool_position.to_account_info(),
             position_mint: self.whirlpool_position_mint.to_account_info(),
             position_token_account: self.whirlpool_position_token_account.to_account_info(),

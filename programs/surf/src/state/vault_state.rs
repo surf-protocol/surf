@@ -29,15 +29,16 @@ pub struct VaultState {
     pub drift_stats: Pubkey,      // 32
     pub drift_subaccount: Pubkey, // 32
 
-    pub collateral_amount: u64,           // 8
-    pub collateral_interest_growth: u128, // 16
+    pub collateral_amount: u64,                      // 8
+    pub collateral_interest_growth: u128,            // 16
+    pub collateral_interest_growth_checkpoint: u128, // 16
 
     pub hedge_positions_count: u64,             // 8
     pub current_hedge_position_id: Option<u64>, // 8
 }
 
 impl VaultState {
-    pub const LEN: usize = 8 + 204;
+    pub const LEN: usize = 8 + 344;
     pub const NAMESPACE: &[u8; 11] = b"vault_state";
 
     pub fn initialize(
@@ -86,11 +87,8 @@ impl VaultState {
         Ok(())
     }
 
-    pub fn open_hedge(&mut self, collateral_amount: u64) -> () {
-        self.collateral_amount = collateral_amount;
-    }
-
-    pub fn update_collateral_interest(&mut self, collateral_interest_growth: u128) -> () {
-        self.collateral_interest_growth = collateral_interest_growth;
+    pub fn update_interest_growth(&mut self, collateral_interest_growth: u128) -> () {
+        self.collateral_interest_growth =
+            collateral_interest_growth + self.collateral_interest_growth_checkpoint;
     }
 }
