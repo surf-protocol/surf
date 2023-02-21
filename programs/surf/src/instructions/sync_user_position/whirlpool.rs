@@ -15,10 +15,10 @@ pub fn handler<'remaining, 'info>(
     for whirlpool_position_ai in ctx.remaining_accounts.iter() {
         let whirlpool_position = Account::<WhirlpoolPosition>::try_from(whirlpool_position_ai)?;
 
-        if whirlpool_position.id > vault_state.whirlpool_positions_count - 1 {
-            return Err(SurfError::InvalidWhirlpoolPosition.into());
-        }
-
+        require!(
+            whirlpool_position.id < vault_state.whirlpool_positions_count,
+            SurfError::InvalidWhirlpoolPosition,
+        );
         require_keys_eq!(
             whirlpool_position.vault_state,
             vault_state.key(),

@@ -40,6 +40,8 @@ pub enum SurfError {
     #[msg("Whirlpool position does not correspond to vault state")]
     InvalidWhirlpoolPosition,
 
+    #[msg("Hedge position does not correspond to vault state")]
+    InvalidHedgePosition,
     #[msg("Hedge position id overflow")]
     HedgePositionIdOverflow,
 

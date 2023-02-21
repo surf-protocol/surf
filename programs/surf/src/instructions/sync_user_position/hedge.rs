@@ -1,6 +1,7 @@
 use anchor_lang::prelude::*;
 
 use crate::{
+    errors::SurfError,
     helpers::hedge::{
         update_user_borrow_amounts, update_user_borrow_interest, update_user_collateral_interest,
     },
@@ -16,12 +17,20 @@ pub fn handler(ctx: Context<SyncUserHedgePosition>) -> Result<()> {
         let hedge_position_loader = AccountLoader::<HedgePosition>::try_from(hedge_position_ai)?;
         let hedge_position = hedge_position_loader.load()?;
 
-        if hedge_position.id > vault_state.hedge_positions_count - 1 {
-            return Ok(());
-        }
-
-        require_keys_eq!(hedge_position.vault_state, vault_state.key());
-        require_eq!(hedge_position.id, user_position.hedge_position_id);
+        require!(
+            hedge_position.id < vault_state.hedge_positions_count,
+            SurfError::InvalidHedgePosition,
+        );
+        require_keys_eq!(
+            hedge_position.vault_state,
+            vault_state.key(),
+            SurfError::InvalidHedgePosition,
+        );
+        require_eq!(
+            hedge_position.id,
+            user_position.hedge_position_id,
+            SurfError::InvalidHedgePosition,
+        );
 
         for (idx, borrow_position) in hedge_position.borrow_positions.iter().enumerate() {
             require_eq!(idx, user_position.borrow_position_index as usize);
@@ -30,13 +39,20 @@ pub fn handler(ctx: Context<SyncUserHedgePosition>) -> Result<()> {
             update_user_borrow_interest(user_position, borrow_position)?;
 
             // 2. update adjustment diffs
-            update_user_borrow_amounts(user_position, borrow_position)?;
-
-            user_position.borrow_position_index = user_position.borrow_position_index + 1;
+            // only if not latest
+            if hedge_position.current_borrow_position_index != idx as u8
+                || vault_state.current_hedge_position_id != Some(hedge_position.id)
+            {
+                update_user_borrow_amounts(user_position, borrow_position)?;
+                user_position.borrow_position_index = user_position.borrow_position_index + 1;
+            }
         }
 
-        user_position.hedge_position_id = user_position.hedge_position_id + 1;
-        user_position.borrow_position_index = 0;
+        // update id if not current
+        if vault_state.current_hedge_position_id != Some(hedge_position.id) {
+            user_position.hedge_position_id = user_position.hedge_position_id + 1;
+            user_position.borrow_position_index = 0;
+        }
     }
 
     // UPDATE COLLATERAL POSITION INTEREST
