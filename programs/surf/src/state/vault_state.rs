@@ -39,7 +39,7 @@ pub struct VaultState {
 
 impl VaultState {
     pub const LEN: usize = 8 + 344;
-    pub const NAMESPACE: &[u8; 11] = b"vault_state";
+    pub const NAMESPACE: &'static [u8; 11] = b"vault_state";
 
     pub fn initialize(
         &mut self,

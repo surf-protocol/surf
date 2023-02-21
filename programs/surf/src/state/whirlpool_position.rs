@@ -5,6 +5,7 @@ use anchor_lang::prelude::*;
 pub struct WhirlpoolPosition {
     pub bump: u8, // 1
 
+    pub vault_state: Pubkey,        // 32
     pub id: u64,                    // 8
     pub whirlpool_position: Pubkey, // 32
 
@@ -16,12 +17,13 @@ pub struct WhirlpoolPosition {
 }
 
 impl WhirlpoolPosition {
-    pub const LEN: usize = 8 + 112;
-    pub const NAMESPACE: &[u8; 18] = b"whirlpool_position";
+    pub const LEN: usize = 8 + 144;
+    pub const NAMESPACE: &'static [u8; 18] = b"whirlpool_position";
 
     pub fn open(
         &mut self,
         bump: u8,
+        vault_state: Pubkey,
         id: u64,
         whirlpool_position: Pubkey,
         liquidity: u128,
@@ -29,6 +31,7 @@ impl WhirlpoolPosition {
         quote_token_fee_growth: u128,
     ) -> () {
         self.bump = bump;
+        self.vault_state = vault_state;
         self.id = id;
         self.whirlpool_position = whirlpool_position;
 

@@ -7,12 +7,12 @@ use whirlpools::{
 };
 
 use crate::{
-    helpers::vault::sync_whirlpool_position,
+    helpers::whirlpool::sync_vault_whirlpool_position,
     state::{VaultState, WhirlpoolPosition as VaultWhirlpoolPosition},
 };
 
 pub fn handler(ctx: Context<SyncWhirlpoolPosition>) -> Result<()> {
-    sync_whirlpool_position(
+    sync_vault_whirlpool_position(
         &mut ctx.accounts.vault_whirlpool_position,
         &mut ctx.accounts.whirlpool,
         &ctx.accounts.whirlpool_position,
@@ -21,6 +21,7 @@ pub fn handler(ctx: Context<SyncWhirlpoolPosition>) -> Result<()> {
         &ctx.accounts.whirlpool_program,
     )?;
 
+    // TODO
     // Fees need to be collected only when user wants to collect fees or when position is being close, which is at adjusting range
     whirlpool_cpi::collect_fees(ctx.accounts.collect_fees_context())?;
 

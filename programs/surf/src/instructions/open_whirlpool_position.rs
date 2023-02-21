@@ -48,6 +48,7 @@ pub fn handler(ctx: Context<OpenWhirlpoolPosition>, position_bump: u8) -> Result
 
     ctx.accounts.vault_whirlpool_position.open(
         vault_whirlpool_position_bump,
+        vault_state.key(),
         vault_state.whirlpool_positions_count,
         ctx.accounts.whirlpool_position.key(),
         0,

@@ -6,10 +6,11 @@ pub fn handler(ctx: Context<OpenHedgePosition>) -> Result<()> {
     let bump = *ctx.bumps.get("vault_hedge_position").unwrap();
     let id = ctx.accounts.vault_state.hedge_positions_count;
 
-    ctx.accounts
-        .vault_hedge_position
-        .load_init()?
-        .initialize(bump, id);
+    ctx.accounts.vault_hedge_position.load_init()?.initialize(
+        bump,
+        ctx.accounts.vault_state.key(),
+        id,
+    );
 
     ctx.accounts.vault_state.open_hedge_position()?;
 

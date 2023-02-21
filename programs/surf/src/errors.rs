@@ -37,7 +37,7 @@ pub enum SurfError {
     WhirlpoolMintsNotMatching,
     #[msg("Whirlpool does not correspond to vault whirlpool")]
     InvalidWhirlpool,
-    #[msg("Whirlpool position does not correspond to vault whirlpool position")]
+    #[msg("Whirlpool position does not correspond to vault state")]
     InvalidWhirlpoolPosition,
 
     #[msg("Hedge position id overflow")]

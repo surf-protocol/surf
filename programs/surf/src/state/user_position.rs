@@ -1,41 +1,70 @@
-// use anchor_lang::prelude::*;
-// use whirlpools_client::math::{checked_mul_shift_right, U256Muldiv};
+use anchor_lang::prelude::*;
 
-// use crate::errors::SurfError;
+#[account]
+#[derive(Default)]
+pub struct UserPosition {
+    pub bump: u8,
 
-// use super::VaultPosition;
+    // WHIRLPOOL DATA
+    pub liquidity: u128,
 
-// #[account]
-// #[derive(Default)]
-// pub struct UserPosition {
-//     pub bump: u8, // 1
+    pub fee_growth_checkpoint_base_token: u128,
+    pub fee_growth_checkpoint_quote_token: u128,
 
-//     pub vault: Pubkey, // 32
+    pub fee_unclaimed_base_token: u64,
+    pub fee_unclaimed_quote_token: u64,
 
-//     pub liquidity: u128, // 16
+    // HEDGE DATA
+    // amounts
+    pub collateral_amount: u64,
+    pub borrow_amount: u64,
+    pub borrow_amount_notional: u64,
 
-//     // Store hedged liquidity to keep track of what part and if position is hedged
-//     pub hedged_liquidity: u128,
-//     // Store collateral and borrowed amounts to keep track how much can user withdraw
-//     pub collateral_quote_amount: u64,  // 8
-//     pub borrowed_base_amount: u64,     // 8
-//     pub notional_borrowed_amount: u64, // 8
+    // interest growth
+    pub collateral_interest_growth_checkpoint: u128,
+    pub borrow_interest_growth_checkpoint: u128,
 
-//     /// Id of active vault position at time of last sync
-//     pub vault_position_checkpoint: u64, // 8
+    pub collateral_interest_unclaimed: u64,
+    pub borrow_interest_unclaimed: u64,
 
-//     pub fee_growth_checkpoint_base_token: u128,  // 16
-//     pub fee_growth_checkpoint_quote_token: u128, // 16
+    // ADJUSTMENTS DATA
+    pub whirlpool_position_id: u64,
+    pub hedge_position_id: u64,
+    pub borrow_position_index: u8,
+}
 
-//     pub hedge_adjustment_loss_checkpoint_base_token: u128, // 16
-//     pub hedge_adjustment_loss_checkpoint_quote_token: u128, // 16
+impl UserPosition {
+    pub const LEN: usize = 8 + 160;
+    pub const NAMESPACE: &'static [u8; 13] = b"user_position";
 
-//     pub fee_unclaimed_base_token: u64,  // 8
-//     pub fee_unclaimed_quote_token: u64, // 8
+    pub fn open(&mut self, bump: u8) -> () {
+        self.bump = bump;
+    }
 
-//     pub hedge_loss_unclaimed_base_token: u64,  // 8
-//     pub hedge_loss_unclaimed_quote_token: u64, // 8
-// }
+    pub fn update_whirlpool_position(
+        &mut self,
+        liquidity: u128,
+        whirlpool_position_id: u64,
+        fee_growth_checkpoint_base_token: u128,
+        fee_growth_checkpoint_quote_token: u128,
+    ) -> () {
+        self.liquidity = liquidity;
+        self.whirlpool_position_id = whirlpool_position_id;
+        self.fee_growth_checkpoint_base_token = fee_growth_checkpoint_base_token;
+        self.fee_growth_checkpoint_quote_token = fee_growth_checkpoint_quote_token;
+    }
+
+    pub fn deposit_liquidity(
+        &mut self,
+        liquidity: u128,
+        fee_growth_checkpoint_base_token: u128,
+        fee_growth_checkpoint_quote_token: u128,
+    ) -> () {
+        self.liquidity = liquidity;
+        self.fee_growth_checkpoint_base_token = fee_growth_checkpoint_base_token;
+        self.fee_growth_checkpoint_quote_token = fee_growth_checkpoint_quote_token;
+    }
+}
 
 // impl UserPosition {
 //     pub const LEN: usize = 8 + 128;

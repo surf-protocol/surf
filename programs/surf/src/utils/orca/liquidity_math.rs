@@ -54,7 +54,7 @@ pub fn get_whirlpool_tokens_deltas(
     Ok((base_token_amount, quote_token_amount))
 }
 
-// The following code is reference from orca-so whirlpools program
+// The following code is referenced from orca-so whirlpools program
 // https://github.com/orca-so/whirlpools/blob/0.8.0/sdk/src/utils/position-util.ts
 
 pub fn get_liquidity_from_quote_token(
@@ -89,11 +89,8 @@ pub fn get_liquidity_from_base_token(
     let result = result_u256.try_into_u128();
 
     if let Err(_) = result {
-        // TODO: Handle
-        return Err(SurfError::BaseTokenOverflow.into());
+        return Err(SurfError::LiquidityOverflow.into());
     }
-
-    dbg!(result.unwrap().shr(64));
 
     if withdraw && !remainder.is_zero() {
         return Ok((result.unwrap().shr(64) as u128) + 1);

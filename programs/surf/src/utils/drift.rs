@@ -26,12 +26,12 @@ pub enum DriftMarket {
     Borrow,
 }
 
-pub fn get_interest<'info>(
+pub fn get_global_interest<'info>(
     token_amount_without_interest: u64,
     drift_subaccount: &User,
     spot_market: &SpotMarket,
     drift_market: DriftMarket,
-) -> Result<u128> {
+) -> Result<u64> {
     let position_idx = match drift_market {
         DriftMarket::Borrow => 1,
         DriftMarket::Collateral => 0,
@@ -52,5 +52,5 @@ pub fn get_interest<'info>(
         };
     }
 
-    Ok(interest)
+    Ok(interest as u64)
 }

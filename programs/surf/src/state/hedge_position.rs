@@ -5,13 +5,11 @@ use anchor_lang::prelude::*;
 #[zero_copy]
 #[derive(Default)]
 pub struct BorrowPosition {
-    pub borrowed_amount: u64,            // 8
-    pub borrowed_amount_diff_above: u64, // 8
-    pub borrowed_amount_diff_below: u64, // 8
+    pub borrowed_amount: u64,      // 8
+    pub borrowed_amount_diff: i64, // 8
 
-    pub borrowed_amount_notional: u64,            // 8
-    pub borrowed_amount_notional_diff_above: u64, // 8
-    pub borrowed_amount_notional_diff_below: u64, // 8
+    pub borrowed_amount_notional: u64,      // 8
+    pub borrowed_amount_notional_diff: i64, // 8
 
     pub borrow_interest_growth: u128,            // 16
     pub borrow_interest_growth_checkpoint: u128, // 16
@@ -21,29 +19,32 @@ pub struct BorrowPosition {
 pub struct HedgePosition {
     pub bump: u8, // 1
 
-    pub id: u64, // 8
+    pub vault_state: Pubkey, // 32
+    pub id: u64,             // 8
 
     pub current_borrow_position_index: u8,       // 1
-    pub borrow_positions: [BorrowPosition; 120], // 9600
+    pub borrow_positions: [BorrowPosition; 150], // 9600
 }
 
 impl Default for HedgePosition {
     fn default() -> HedgePosition {
         HedgePosition {
             bump: 0,
+            vault_state: Pubkey::default(),
             id: 0,
             current_borrow_position_index: 0,
-            borrow_positions: [BorrowPosition::default(); 120],
+            borrow_positions: [BorrowPosition::default(); 150],
         }
     }
 }
 
 impl HedgePosition {
-    pub const LEN: usize = 8 + 9624;
-    pub const NAMESPACE: &[u8; 14] = b"hedge_position";
+    pub const LEN: usize = 8 + 9656;
+    pub const NAMESPACE: &'static [u8; 14] = b"hedge_position";
 
-    pub fn initialize(&mut self, bump: u8, id: u64) -> () {
+    pub fn initialize(&mut self, bump: u8, vault_state: Pubkey, id: u64) -> () {
         self.bump = bump;
+        self.vault_state = vault_state;
         self.id = id;
     }
 

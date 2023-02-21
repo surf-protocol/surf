@@ -42,4 +42,30 @@ pub mod surf {
     pub fn sync_whirlpool_position(ctx: Context<SyncWhirlpoolPosition>) -> Result<()> {
         sync_whirlpool_position::handler(ctx)
     }
+
+    /// Synchronizes user whirlpool position fees, rewards and liquidity to match current state
+    ///
+    /// As vault whirlpool position adjusts, liquidity provided changes and needs to be stored
+    /// separately per each whirlpool position to be able to calculate fees and rewards for user
+    ///
+    /// **Requires** previous vault_whirlpool_positions which the user_position was not yet synced with
+    /// up until the active one (no need to provide all at once) sorted by each whirlpool position id
+    /// from the oldest to the newest in remaining accounts
+    pub fn sync_user_whirlpool_position<'remaining, 'info>(
+        ctx: Context<'_, '_, 'remaining, 'info, SyncUserWhirlpoolPosition<'info>>,
+    ) -> Result<()> {
+        sync_user_position::whirlpool::handler(ctx)
+    }
+
+    /// Synchronizes user hedge position interests and token amounts to match current state
+    ///
+    /// As vault hedge adjusts borrow amounts for each adjustment need to be stored separately
+    /// in order to be able to compute user interest for each adjustment stage
+    ///
+    /// **Requires** previous hedge_positions which the user_position was not yet synced with
+    /// up until the active one (no need to provide all at once) sorted by each hedge position id
+    /// from the oldest to the newest in remaining accounts
+    pub fn sync_user_hedge_position(ctx: Context<SyncUserHedgePosition>) -> Result<()> {
+        sync_user_position::hedge::handler(ctx)
+    }
 }
