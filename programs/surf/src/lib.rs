@@ -43,6 +43,15 @@ pub mod surf {
         sync_whirlpool_position::handler(ctx)
     }
 
+    pub fn deposit_liquidity(
+        ctx: Context<DepositLiquidity>,
+        liquidity_input: u128,
+        base_token_max: u64,
+        quote_token_max: u64,
+    ) -> Result<()> {
+        deposit_liquidity::handler(ctx, liquidity_input, base_token_max, quote_token_max)
+    }
+
     /// Synchronizes user whirlpool position fees, rewards and liquidity to match current state
     ///
     /// As vault whirlpool position adjusts, liquidity provided changes and needs to be stored
@@ -51,6 +60,7 @@ pub mod surf {
     /// **Requires** previous vault_whirlpool_positions which the user_position was not yet synced with
     /// up until the active one (no need to provide all at once) sorted by each whirlpool position id
     /// from the oldest to the newest in remaining accounts
+    /// all the accounts are not signers, and not writable
     pub fn sync_user_whirlpool_position<'remaining, 'info>(
         ctx: Context<'_, '_, 'remaining, 'info, SyncUserWhirlpoolPosition<'info>>,
     ) -> Result<()> {
@@ -65,7 +75,12 @@ pub mod surf {
     /// **Requires** previous hedge_positions which the user_position was not yet synced with
     /// up until the active one (no need to provide all at once) sorted by each hedge position id
     /// from the oldest to the newest in remaining accounts
+    /// all the accounts are not signers, and not writable
     pub fn sync_user_hedge_position(ctx: Context<SyncUserHedgePosition>) -> Result<()> {
         sync_user_position::hedge::handler(ctx)
+    }
+
+    pub fn collect_user_fees_and_rewards(ctx: Context<CollectUserFeesAndRewards>) -> Result<()> {
+        collect_user_fees_and_rewards::handler(ctx)
     }
 }

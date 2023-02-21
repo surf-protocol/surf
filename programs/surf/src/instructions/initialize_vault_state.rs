@@ -147,6 +147,7 @@ pub struct InitializeVaultState<'info> {
 
     // ------
     // Drift accounts
+    /// CHECK: Drift program validates the account in the CPI
     pub drift_state: UncheckedAccount<'info>,
     /// CHECK: Drift program validates the account in the CPI
     #[account(

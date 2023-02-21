@@ -70,6 +70,7 @@ pub struct SyncUserHedgePosition<'info> {
         seeds = [
             UserPosition::NAMESPACE.as_ref(),
             vault_state.key().as_ref(),
+            owner.key().as_ref(),
         ],
         bump = user_position.bump,
     )]

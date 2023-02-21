@@ -5,6 +5,7 @@ use whirlpools::{
     program::Whirlpool as WhirlpoolProgram,
     OpenPositionBumps, Whirlpool,
 };
+use whirlpools_client::math::sqrt_price_from_tick_index;
 
 use crate::{
     errors::SurfError,
@@ -46,6 +47,9 @@ pub fn handler(ctx: Context<OpenWhirlpoolPosition>, position_bump: u8) -> Result
     let vault_state = &mut ctx.accounts.vault_state;
     let whirlpool = &ctx.accounts.whirlpool;
 
+    let upper_sqrt_price = sqrt_price_from_tick_index(tick_upper_initializable);
+    let lower_sqrt_price = sqrt_price_from_tick_index(tick_lower_initializable);
+
     ctx.accounts.vault_whirlpool_position.open(
         vault_whirlpool_position_bump,
         vault_state.key(),
@@ -54,6 +58,8 @@ pub fn handler(ctx: Context<OpenWhirlpoolPosition>, position_bump: u8) -> Result
         0,
         whirlpool.fee_growth_global_a,
         whirlpool.fee_growth_global_b,
+        upper_sqrt_price,
+        lower_sqrt_price,
     );
 
     vault_state.current_whirlpool_position_id = Some(vault_state.whirlpool_positions_count);

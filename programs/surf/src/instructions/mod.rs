@@ -1,5 +1,6 @@
 pub mod adjust_vault_hedge;
-pub mod collect_user_fees;
+pub mod claim_user_interest;
+pub mod collect_user_fees_and_rewards;
 pub mod deposit_liquidity;
 pub mod hedge_liquidity;
 pub mod initialize_admin_config;
@@ -11,7 +12,8 @@ pub mod sync_user_position;
 pub mod sync_whirlpool_position;
 
 pub use adjust_vault_hedge::*;
-pub use collect_user_fees::*;
+pub use claim_user_interest::*;
+pub use collect_user_fees_and_rewards::*;
 pub use deposit_liquidity::*;
 pub use hedge_liquidity::*;
 pub use initialize_admin_config::*;
