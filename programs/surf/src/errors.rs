@@ -63,6 +63,18 @@ pub enum SurfError {
     #[msg("Can not update user position without providing previous vault positions")]
     MissingPreviousVaultPositions,
 
+    #[msg("User position does not have any liquidity")]
+    ZeroLiquidity,
+    #[msg("Current base token amount in whirlpool is zero, can not hedge 0")]
+    ZeroBaseTokenWhirlpoolAmount,
+    #[msg("Collateral amount overflow")]
+    CollateralOverflow,
+    #[msg("Borrow amount overflow")]
+    BorrowOverflow,
+    #[msg("Borrow amount notional overflow")]
+    BorrowNotionalOverflow,
+    #[msg("Borrow amount amount is higher than current whirlpool base token amount")]
+    BorrowAmountTooHigh,
     #[msg("Collateral interest overflow")]
     CollateralInterestOverflow,
     #[msg("Borrow interest overflow")]

@@ -1,4 +1,5 @@
 use anchor_lang::prelude::*;
+use anchor_spl::token::TokenAccount;
 use drift::state::{spot_market::SpotMarket, user::User};
 
 use crate::{
@@ -152,4 +153,31 @@ pub fn calculate_user_amount_diff(
         (user_amount as u128) * (global_diff_abs as u128) / (new_global_amount as u128);
 
     Ok(new_user_amount as u64)
+}
+
+pub fn get_hedged_notional_amount<'info>(
+    vault_quote_token_account: &mut Account<'info, TokenAccount>,
+) -> Result<u64> {
+    let pre_amount = vault_quote_token_account.amount;
+    vault_quote_token_account.reload()?;
+    let post_amount = vault_quote_token_account.amount;
+
+    Ok(post_amount - pre_amount)
+}
+
+pub fn increase_vault_hedge_token_amounts<'info>(
+    vault_state: &mut Account<'info, VaultState>,
+    hedge_position: &mut HedgePosition,
+    collateral_amount: u64,
+    borrow_amount: u64,
+    borrow_amount_notional: u64,
+) -> Result<()> {
+    vault_state.collateral_amount = vault_state
+        .collateral_amount
+        .checked_add(collateral_amount)
+        .ok_or(SurfError::CollateralOverflow)?;
+
+    hedge_position.hedge(borrow_amount, borrow_amount_notional)?;
+
+    Ok(())
 }

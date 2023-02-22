@@ -47,6 +47,8 @@ pub fn handler(ctx: Context<OpenWhirlpoolPosition>, position_bump: u8) -> Result
     let vault_state = &mut ctx.accounts.vault_state;
     let whirlpool = &ctx.accounts.whirlpool;
 
+    let middle_tick_index = (tick_upper_initializable + tick_lower_initializable) / 2;
+    let middle_sqrt_price = sqrt_price_from_tick_index(middle_tick_index);
     let upper_sqrt_price = sqrt_price_from_tick_index(tick_upper_initializable);
     let lower_sqrt_price = sqrt_price_from_tick_index(tick_lower_initializable);
 
@@ -60,6 +62,7 @@ pub fn handler(ctx: Context<OpenWhirlpoolPosition>, position_bump: u8) -> Result
         whirlpool.fee_growth_global_b,
         upper_sqrt_price,
         lower_sqrt_price,
+        middle_sqrt_price,
     );
 
     vault_state.current_whirlpool_position_id = Some(vault_state.whirlpool_positions_count);

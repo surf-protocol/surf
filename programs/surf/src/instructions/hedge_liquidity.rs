@@ -1,305 +1,301 @@
-// use anchor_lang::prelude::*;
-// use anchor_spl::token::{self as token_cpi, Token, TokenAccount, Transfer};
-// use drift::{
-//     cpi::{
-//         self as drift_cpi,
-//         accounts::{Deposit as DriftDeposit, Withdraw as DriftWithdraw},
-//     },
-//     program::Drift,
-//     state::{
-//         spot_market::SpotMarket as DriftSpotMarket,
-//         state::State as DriftState,
-//         user::{User as DriftSubaccount, UserStats as DriftStats},
-//     },
-// };
-// use whirlpools::{
-//     cpi::{self as whirlpool_cpi, accounts::Swap},
-//     program::Whirlpool as WhirlpoolProgram,
-//     TickArray, Whirlpool,
-// };
-// use whirlpools_client::math::MIN_SQRT_PRICE_X64;
+use anchor_lang::prelude::*;
+use anchor_spl::token::{self as token_cpi, Token, TokenAccount, Transfer};
+use drift::{
+    cpi as drift_cpi,
+    program::Drift,
+    state::{
+        spot_market::SpotMarket,
+        state::State as DriftState,
+        user::{User as DriftSubaccount, UserStats as DriftStats},
+    },
+};
+use whirlpools::{
+    cpi::{self as whirlpool_cpi, accounts::Swap},
+    program::Whirlpool as WhirlpoolProgram,
+    TickArray, Whirlpool,
+};
+use whirlpools_client::math::MIN_SQRT_PRICE_X64;
 
-// use crate::{
-//     errors::SurfError,
-//     state::{UserPosition, Vault, VaultPosition},
-//     utils::{
-//         constraints::{have_matching_mints, is_user_position_synced},
-//         orca::liquidity_math::{get_amount_delta_a_wrapped, get_amount_delta_b_wrapped},
-//     },
-// };
+use crate::{
+    drift_deposit_collateral_context_impl, drift_withdraw_borrow_context_impl,
+    errors::SurfError,
+    helpers::hedge::{
+        get_hedged_notional_amount, increase_vault_hedge_token_amounts,
+        sync_vault_interest_growths, update_user_borrow_interest, update_user_collateral_interest,
+    },
+    state::{HedgePosition, UserPosition, VaultState, WhirlpoolPosition},
+    utils::orca::liquidity_math::{get_amount_delta_a_wrapped, get_amount_delta_b_wrapped},
+};
 
-// pub fn handler(ctx: Context<HedgeLiquidity>) -> Result<()> {
-//     let vault_position = &ctx.accounts.vault_position;
-//     let user_position = &ctx.accounts.user_position;
+pub fn handler(ctx: Context<HedgeLiquidity>, borrow_amount: u64) -> Result<()> {
+    // 1. validate user position
+    let user_position = &mut ctx.accounts.user_position;
+    let whirlpool_position = &ctx.accounts.vault_whirlpool_position;
+    let mut hedge_position = ctx.accounts.vault_hedge_position.load_mut()?;
 
-//     let unhedged_liquidity = user_position.liquidity - user_position.hedged_liquidity;
+    require!(user_position.liquidity > 0, SurfError::ZeroLiquidity);
+    // Validate if user position is synced with whirlpool position and hedge position
+    require_eq!(user_position.whirlpool_position_id, whirlpool_position.id);
+    require_eq!(user_position.hedge_position_id, hedge_position.id);
+    require_eq!(
+        user_position.borrow_position_index,
+        hedge_position.current_borrow_position_index
+    );
 
-//     if unhedged_liquidity == 0 {
-//         return Err(SurfError::UserPositionAlreadyHedged.into());
-//     }
+    // 2. sync user position
+    let drift_subaccount = ctx.accounts.drift_subaccount.load()?;
+    let drift_collateral_spot_market = ctx.accounts.drift_collateral_spot_market.load()?;
+    let drift_base_token_spot_market = ctx.accounts.drift_borrow_spot_market.load()?;
 
-//     // TRANSFER COLLATERAL FROM USER TO VAULT
-//     let quote_token_amount = get_amount_delta_b_wrapped(
-//         vault_position.middle_sqrt_price,
-//         vault_position.lower_sqrt_price,
-//         unhedged_liquidity,
-//         true,
-//     )?;
-//     let unhedged_collateral = quote_token_amount * 2;
+    sync_vault_interest_growths(
+        &mut ctx.accounts.vault_state,
+        &mut hedge_position,
+        &drift_subaccount,
+        &drift_collateral_spot_market,
+        &drift_base_token_spot_market,
+    )?;
 
-//     token_cpi::transfer(ctx.accounts.transfer_context(), unhedged_collateral)?;
+    let borrow_position = hedge_position.get_current_position();
+    update_user_borrow_interest(user_position, &borrow_position)?;
+    update_user_collateral_interest(user_position, &ctx.accounts.vault_state)?;
 
-//     // DEPOSIT COLLATERAL TO DRIFT
-//     drift_cpi::deposit(
-//         ctx.accounts.deposit_collateral_context(),
-//         0_u16,
-//         unhedged_collateral,
-//         false,
-//     )?;
+    drop(user_position);
 
-//     // BORROW FROM DRIFT
-//     let unhedged_base_token_amount = get_amount_delta_a_wrapped(
-//         vault_position.upper_sqrt_price,
-//         ctx.accounts.whirlpool.sqrt_price,
-//         unhedged_liquidity,
-//         true,
-//     )?;
+    // 3. transfer collateral from user to vault
+    let user_position = &ctx.accounts.user_position;
 
-//     drift_cpi::withdraw(
-//         ctx.accounts.borrow_context(),
-//         1_u16,
-//         unhedged_base_token_amount,
-//         false,
-//     )?;
+    let lower_sqrt_price = whirlpool_position.lower_sqrt_price;
+    let middle_sqrt_price = whirlpool_position.middle_sqrt_price;
 
-//     // SWAP BORROWED AMOUNT
-//     whirlpool_cpi::swap(
-//         ctx.accounts.hedge_swap_context(),
-//         unhedged_base_token_amount,
-//         0,
-//         MIN_SQRT_PRICE_X64,
-//         true,
-//         true,
-//     )?;
+    let required_collateral_amount = get_amount_delta_b_wrapped(
+        lower_sqrt_price,
+        middle_sqrt_price,
+        user_position.liquidity,
+        true,
+    )?;
+    let current_collateral_amount = user_position.collateral_amount;
 
-//     // UPDATE HEDGE LOSSES AND HEDGE
-//     let vault_quote_token_account = &mut ctx.accounts.vault_quote_token_account;
-//     let pre_hedge_vault_quote_token_amount = vault_quote_token_account.amount;
-//     vault_quote_token_account.reload()?;
-//     let post_hedge_vault_quote_token_amount = vault_quote_token_account.amount;
+    let mut collateral_amount = 0_u64;
 
-//     let notional_borrowed_amount =
-//         post_hedge_vault_quote_token_amount - pre_hedge_vault_quote_token_amount;
+    // Only deposit collateral if user does not have enough collateral to cover whole whirlpool position
+    if required_collateral_amount > current_collateral_amount {
+        collateral_amount = required_collateral_amount - current_collateral_amount;
 
-//     ctx.accounts
-//         .user_position
-//         .update_fees_and_hedge_losses(vault_position);
+        token_cpi::transfer(
+            CpiContext::new(
+                ctx.accounts.token_program.to_account_info(),
+                Transfer {
+                    from: ctx.accounts.owner_quote_token_account.to_account_info(),
+                    to: ctx.accounts.vault_quote_token_account.to_account_info(),
+                    authority: ctx.accounts.owner.to_account_info(),
+                },
+            ),
+            collateral_amount,
+        )?;
 
-//     ctx.accounts.user_position.hedge(
-//         unhedged_collateral,
-//         unhedged_base_token_amount,
-//         notional_borrowed_amount,
-//     );
+        // 4. deposit collateral
+        drift_cpi::deposit(
+            ctx.accounts.drift_deposit_collateral_context(),
+            0_u16,
+            collateral_amount,
+            false,
+        )?;
+    }
 
-//     ctx.accounts.vault_position.hedge_liquidity(
-//         unhedged_liquidity,
-//         unhedged_collateral,
-//         unhedged_base_token_amount,
-//         notional_borrowed_amount,
-//     );
+    // 5. borrow base token
+    let upper_sqrt_price = whirlpool_position.upper_sqrt_price;
+    let base_token_whirlpool_amount = get_amount_delta_a_wrapped(
+        middle_sqrt_price,
+        upper_sqrt_price,
+        user_position.liquidity,
+        true,
+    )?;
 
-//     Ok(())
-// }
+    if base_token_whirlpool_amount == 0 {
+        return Err(SurfError::ZeroBaseTokenWhirlpoolAmount.into());
+    }
 
-// #[derive(Accounts)]
-// pub struct HedgeLiquidity<'info> {
-//     pub owner: Signer<'info>,
-//     #[account(
-//         mut,
-//         token::mint = vault.quote_token_mint,
-//         token::authority = owner.key(),
-//     )]
-//     pub owner_quote_token_account: Box<Account<'info, TokenAccount>>,
+    if base_token_whirlpool_amount < borrow_amount {
+        return Err(SurfError::BorrowAmountTooHigh.into());
+    }
 
-//     #[account(
-//         mut,
-//         seeds = [
-//             UserPosition::NAMESPACE.as_ref(),
-//             vault.key().as_ref(),
-//             owner.key().as_ref(),
-//         ],
-//         bump = user_position.bump,
-//         constraint = is_user_position_synced(&user_position, &vault),
-//     )]
-//     pub user_position: Box<Account<'info, UserPosition>>,
+    drift_cpi::withdraw(
+        ctx.accounts.drift_withdraw_borrow_context(),
+        1_u16,
+        borrow_amount,
+        false,
+    )?;
 
-//     #[account(
-//         seeds = [
-//             VaultPosition::NAMESPACE.as_ref(),
-//             vault.key().as_ref(),
-//             vault.vault_positions_count.to_le_bytes().as_ref(),
-//         ],
-//         bump = vault_position.bump,
-//     )]
-//     pub vault_position: Box<Account<'info, VaultPosition>>,
+    // 6. sell borrowed tokens
+    whirlpool_cpi::swap(
+        ctx.accounts.swap_context(),
+        borrow_amount,
+        0,
+        MIN_SQRT_PRICE_X64,
+        true,
+        true,
+    )?;
 
-//     #[account(has_one = whirlpool)]
-//     pub vault: Box<Account<'info, Vault>>,
-//     #[account(
-//         mut,
-//         address = vault.base_token_account,
-//     )]
-//     pub vault_base_token_account: Box<Account<'info, TokenAccount>>,
-//     #[account(
-//         mut,
-//         address = vault.quote_token_account,
-//     )]
-//     pub vault_quote_token_account: Box<Account<'info, TokenAccount>>,
+    // 7. update program accounts
+    let borrow_amount_notional =
+        get_hedged_notional_amount(&mut ctx.accounts.vault_quote_token_account)?;
 
-//     pub whirlpool: Box<Account<'info, Whirlpool>>,
+    increase_vault_hedge_token_amounts(
+        &mut ctx.accounts.vault_state,
+        &mut hedge_position,
+        collateral_amount,
+        borrow_amount,
+        borrow_amount_notional,
+    )?;
 
-//     // ---------
-//     // DRIFT ACCOUNTS
-//     pub drift_state: Box<Account<'info, DriftState>>,
-//     /// CHECK: Drift program checks these accounts
-//     pub drift_signer: UncheckedAccount<'info>,
+    ctx.accounts
+        .user_position
+        .hedge(collateral_amount, borrow_amount, borrow_amount_notional)?;
 
-//     /// CHECK: Drift program checks these accounts
-//     pub drift_base_token_oracle: UncheckedAccount<'info>,
-//     #[account(
-//         mut,
-//         seeds = [
-//             b"spot_market_vault".as_ref(),
-//             1_u16.to_le_bytes().as_ref(),
-//         ],
-//         bump,
-//         seeds::program = drift_program.key(),
-//     )]
-//     pub drift_base_spot_market_vault: Box<Account<'info, TokenAccount>>,
-//     pub drift_base_spot_market: AccountLoader<'info, DriftSpotMarket>,
+    Ok(())
+}
 
-//     #[account(
-//         mut,
-//         seeds = [
-//             b"spot_market_vault".as_ref(),
-//             0_u16.to_le_bytes().as_ref(),
-//         ],
-//         bump,
-//         seeds::program = drift_program.key(),
-//     )]
-//     pub drift_quote_spot_market_vault: Box<Account<'info, TokenAccount>>,
-//     #[account(mut)]
-//     pub drift_quote_spot_market: AccountLoader<'info, DriftSpotMarket>,
+#[derive(Accounts)]
+pub struct HedgeLiquidity<'info> {
+    pub owner: Signer<'info>,
 
-//     #[account(
-//         mut,
-//         address = vault.drift_stats,
-//     )]
-//     pub drift_stats: AccountLoader<'info, DriftStats>,
-//     #[account(
-//         mut,
-//         address = vault.drift_subaccount,
-//     )]
-//     pub drift_subaccount: AccountLoader<'info, DriftSubaccount>,
+    #[account(
+        mut,
+        token::mint = vault_state.quote_token_mint,
+        token::authority = owner,
+    )]
+    pub owner_quote_token_account: Box<Account<'info, TokenAccount>>,
 
-//     // ----------
-//     // HEDGE SWAP ACCOUNTS
-//     #[account(
-//         mut,
-//         constraint = have_matching_mints(&whirlpool, &hedge_swap_whirlpool) @SurfError::WhirlpoolMintsNotMatching,
-//     )]
-//     pub hedge_swap_whirlpool: Box<Account<'info, Whirlpool>>,
+    #[account(
+        mut,
+        seeds = [
+            UserPosition::NAMESPACE.as_ref(),
+            vault_state.key().as_ref(),
+            owner.key().as_ref(),
+        ],
+        bump = user_position.bump,
+    )]
+    pub user_position: Box<Account<'info, UserPosition>>,
 
-//     #[account(
-//         mut,
-//         address = hedge_swap_whirlpool.token_vault_a,
-//     )]
-//     pub hedge_swap_whirlpool_base_token_account: Box<Account<'info, TokenAccount>>,
-//     #[account(
-//         mut,
-//         address = hedge_swap_whirlpool.token_vault_b,
-//     )]
-//     pub hedge_swap_whirlpool_quote_token_account: Box<Account<'info, TokenAccount>>,
+    #[account(
+        constraint = vault_state.hedge_positions_count > 0,
+    )]
+    pub vault_state: Box<Account<'info, VaultState>>,
+    #[account(
+        mut,
+        address = vault_state.base_token_account,
+    )]
+    pub vault_base_token_account: Box<Account<'info, TokenAccount>>,
+    #[account(
+        mut,
+        address = vault_state.quote_token_account,
+    )]
+    pub vault_quote_token_account: Box<Account<'info, TokenAccount>>,
 
-//     #[account(mut)]
-//     pub hedge_swap_tick_array_0: AccountLoader<'info, TickArray>,
-//     #[account(mut)]
-//     pub hedge_swap_tick_array_1: AccountLoader<'info, TickArray>,
-//     #[account(mut)]
-//     pub hedge_swap_tick_array_2: AccountLoader<'info, TickArray>,
+    #[account(
+        constraint = vault_whirlpool_position.vault_state.eq(&vault_state.key()),
+        constraint = Some(vault_whirlpool_position.id) == vault_state.current_whirlpool_position_id,
+    )]
+    pub vault_whirlpool_position: Account<'info, WhirlpoolPosition>,
 
-//     /// CHECK: Whirlpool CPI
-//     pub hedge_swap_oracle: UncheckedAccount<'info>,
+    #[account(
+        mut,
+        seeds = [
+            HedgePosition::NAMESPACE.as_ref(),
+            vault_state.key().as_ref(),
+            vault_state.current_hedge_position_id.unwrap().to_le_bytes().as_ref(),
+        ],
+        bump,
+    )]
+    pub vault_hedge_position: AccountLoader<'info, HedgePosition>,
 
-//     pub drift_program: Program<'info, Drift>,
-//     pub whirlpool_program: Program<'info, WhirlpoolProgram>,
-//     pub token_program: Program<'info, Token>,
-// }
+    /// CHECK: Drift CPI checks
+    pub drift_signer: UncheckedAccount<'info>,
+    pub drift_state: Box<Account<'info, DriftState>>,
+    #[account(
+        mut,
+        address = vault_state.drift_stats,
+    )]
+    pub drift_stats: AccountLoader<'info, DriftStats>,
+    #[account(
+        mut,
+        address = vault_state.drift_subaccount,
+    )]
+    pub drift_subaccount: AccountLoader<'info, DriftSubaccount>,
 
-// impl<'info> HedgeLiquidity<'info> {
-//     pub fn transfer_context(&self) -> CpiContext<'_, '_, '_, 'info, Transfer<'info>> {
-//         let program = &self.token_program;
-//         let accounts = Transfer {
-//             from: self.owner_quote_token_account.to_account_info(),
-//             to: self.vault_quote_token_account.to_account_info(),
-//             authority: self.owner.to_account_info(),
-//         };
-//         CpiContext::new(program.to_account_info(), accounts)
-//     }
+    /// CHECK: Drift program checks these accounts
+    pub drift_base_token_oracle: UncheckedAccount<'info>,
+    #[account(
+        mut,
+        seeds = [
+            b"spot_market_vault".as_ref(),
+            1_u16.to_le_bytes().as_ref(),
+        ],
+        bump,
+        seeds::program = drift_program.key(),
+    )]
+    pub drift_borrow_vault: Box<Account<'info, TokenAccount>>,
+    pub drift_borrow_spot_market: AccountLoader<'info, SpotMarket>,
+    #[account(
+        mut,
+        seeds = [
+            b"spot_market_vault".as_ref(),
+            0_u16.to_le_bytes().as_ref(),
+        ],
+        bump,
+        seeds::program = drift_program.key(),
+    )]
+    pub drift_collateral_vault: Box<Account<'info, TokenAccount>>,
+    pub drift_collateral_spot_market: AccountLoader<'info, SpotMarket>,
 
-//     pub fn deposit_collateral_context(&self) -> CpiContext<'_, '_, '_, 'info, DriftDeposit<'info>> {
-//         let program = &self.drift_program;
-//         let accounts = DriftDeposit {
-//             authority: self.vault.to_account_info(),
-//             user_token_account: self.vault_quote_token_account.to_account_info(),
-//             user: self.drift_subaccount.to_account_info(),
-//             user_stats: self.drift_stats.to_account_info(),
-//             state: self.drift_state.to_account_info(),
-//             spot_market_vault: self.drift_quote_spot_market_vault.to_account_info(),
-//             token_program: self.token_program.to_account_info(),
-//         };
-//         CpiContext::new(program.to_account_info(), accounts)
-//             .with_remaining_accounts(vec![self.drift_quote_spot_market.to_account_info()])
-//     }
+    // -------------
+    // SWAP ACCOUNTS
+    #[account(
+        mut,
+        constraint = swap_whirlpool.token_mint_a.eq(&vault_state.base_token_mint),
+        constraint = swap_whirlpool.token_mint_b.eq(&vault_state.quote_token_mint),
+    )]
+    pub swap_whirlpool: Box<Account<'info, Whirlpool>>,
 
-//     pub fn borrow_context(&self) -> CpiContext<'_, '_, '_, 'info, DriftWithdraw<'info>> {
-//         let program = &self.drift_program;
-//         let accounts = DriftWithdraw {
-//             state: self.drift_state.to_account_info(),
-//             drift_signer: self.drift_signer.to_account_info(),
-//             spot_market_vault: self.drift_base_spot_market_vault.to_account_info(),
-//             user: self.drift_subaccount.to_account_info(),
-//             user_stats: self.drift_stats.to_account_info(),
-//             authority: self.vault.to_account_info(),
-//             user_token_account: self.vault_base_token_account.to_account_info(),
-//             token_program: self.token_program.to_account_info(),
-//         };
-//         CpiContext::new(program.to_account_info(), accounts).with_remaining_accounts(vec![
-//             self.drift_base_token_oracle.to_account_info(),
-//             self.drift_quote_spot_market.to_account_info(),
-//             self.drift_base_spot_market.to_account_info(),
-//         ])
-//     }
+    #[account(mut)]
+    pub swap_whirlpool_base_token_vault: Box<Account<'info, TokenAccount>>,
+    #[account(mut)]
+    pub swap_whirlpool_quote_token_vault: Box<Account<'info, TokenAccount>>,
 
-//     pub fn hedge_swap_context(&self) -> CpiContext<'_, '_, '_, 'info, Swap<'info>> {
-//         let program = &self.whirlpool_program;
-//         let accounts = Swap {
-//             whirlpool: self.hedge_swap_whirlpool.to_account_info(),
-//             token_vault_a: self
-//                 .hedge_swap_whirlpool_base_token_account
-//                 .to_account_info(),
-//             token_vault_b: self
-//                 .hedge_swap_whirlpool_quote_token_account
-//                 .to_account_info(),
-//             tick_array0: self.hedge_swap_tick_array_0.to_account_info(),
-//             tick_array1: self.hedge_swap_tick_array_1.to_account_info(),
-//             tick_array2: self.hedge_swap_tick_array_2.to_account_info(),
-//             oracle: self.hedge_swap_oracle.to_account_info(),
-//             token_authority: self.vault.to_account_info(),
-//             token_owner_account_a: self.vault_base_token_account.to_account_info(),
-//             token_owner_account_b: self.vault_quote_token_account.to_account_info(),
-//             token_program: self.token_program.to_account_info(),
-//         };
-//         CpiContext::new(program.to_account_info(), accounts)
-//     }
-// }
+    #[account(mut)]
+    pub swap_tick_array_0: AccountLoader<'info, TickArray>,
+    #[account(mut)]
+    pub swap_tick_array_1: AccountLoader<'info, TickArray>,
+    #[account(mut)]
+    pub swap_tick_array_2: AccountLoader<'info, TickArray>,
+
+    /// CHECK: Whirlpool CPI checks
+    pub swap_oracle: UncheckedAccount<'info>,
+
+    pub drift_program: Program<'info, Drift>,
+    pub whirlpool_program: Program<'info, WhirlpoolProgram>,
+    pub token_program: Program<'info, Token>,
+}
+
+impl<'info> HedgeLiquidity<'info> {
+    pub fn swap_context(&self) -> CpiContext<'_, '_, '_, 'info, Swap<'info>> {
+        let program = &self.whirlpool_program;
+        let accounts = Swap {
+            whirlpool: self.swap_whirlpool.to_account_info(),
+            token_vault_a: self.swap_whirlpool_base_token_vault.to_account_info(),
+            token_vault_b: self.swap_whirlpool_quote_token_vault.to_account_info(),
+            token_authority: self.vault_state.to_account_info(),
+            token_owner_account_a: self.vault_base_token_account.to_account_info(),
+            token_owner_account_b: self.vault_quote_token_account.to_account_info(),
+            tick_array0: self.swap_tick_array_0.to_account_info(),
+            tick_array1: self.swap_tick_array_1.to_account_info(),
+            tick_array2: self.swap_tick_array_2.to_account_info(),
+            oracle: self.swap_oracle.to_account_info(),
+            token_program: self.token_program.to_account_info(),
+        };
+        CpiContext::new(program.to_account_info(), accounts)
+    }
+}
+
+drift_deposit_collateral_context_impl!(HedgeLiquidity);
+drift_withdraw_borrow_context_impl!(HedgeLiquidity);

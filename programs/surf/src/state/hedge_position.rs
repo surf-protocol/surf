@@ -2,6 +2,8 @@ use std::borrow::BorrowMut;
 
 use anchor_lang::prelude::*;
 
+use crate::errors::SurfError;
+
 #[zero_copy]
 #[derive(Default)]
 pub struct BorrowPosition {
@@ -48,11 +50,18 @@ impl HedgePosition {
         self.id = id;
     }
 
-    pub fn borrow(&mut self, borrowed_amount: u64, borrowed_amount_notional: u64) -> Result<()> {
+    pub fn hedge(&mut self, borrowed_amount: u64, borrowed_amount_notional: u64) -> Result<()> {
         let ci = self.current_borrow_position_index as usize;
+        let mut borrow_position = self.borrow_positions[ci].borrow_mut();
 
-        self.borrow_positions[ci].borrowed_amount = borrowed_amount;
-        self.borrow_positions[ci].borrowed_amount_notional = borrowed_amount_notional;
+        borrow_position.borrowed_amount = borrow_position
+            .borrowed_amount
+            .checked_add(borrowed_amount)
+            .ok_or(SurfError::BorrowOverflow)?;
+        borrow_position.borrowed_amount_notional = borrow_position
+            .borrowed_amount_notional
+            .checked_add(borrowed_amount_notional)
+            .ok_or(SurfError::BorrowNotionalOverflow)?;
 
         Ok(())
     }

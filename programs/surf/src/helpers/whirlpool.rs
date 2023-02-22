@@ -44,23 +44,27 @@ pub fn update_user_fees_and_rewards<'info>(
     let current_base_growth = whirlpool_position.base_token_fee_growth;
     let current_quote_growth = whirlpool_position.quote_token_fee_growth;
 
-    // The following code is referenced from orca-so whirlpools program
-    // https://github.com/orca-so/whirlpools/blob/0.8.0/programs/whirlpool/src/manager/position_manager.rs#L16
-    let delta_base_token_per_unit =
-        current_base_growth.wrapping_sub(user_position.fee_growth_checkpoint_base_token);
-    let delta_quote_token_per_unit =
-        current_quote_growth.wrapping_sub(user_position.fee_growth_checkpoint_quote_token);
+    if user_position.liquidity > 0 {
+        // The following code is referenced from orca-so whirlpools program
+        // https://github.com/orca-so/whirlpools/blob/0.8.0/programs/whirlpool/src/manager/position_manager.rs#L16
+        let delta_base_token_per_unit =
+            current_base_growth.wrapping_sub(user_position.fee_growth_checkpoint_base_token);
+        let delta_quote_token_per_unit =
+            current_quote_growth.wrapping_sub(user_position.fee_growth_checkpoint_quote_token);
 
-    let delta_base_token =
-        checked_mul_shift_right(delta_base_token_per_unit, user_position.liquidity).unwrap_or(0);
-    let delta_quote_token =
-        checked_mul_shift_right(delta_quote_token_per_unit, user_position.liquidity).unwrap_or(0);
+        let delta_base_token =
+            checked_mul_shift_right(delta_base_token_per_unit, user_position.liquidity)
+                .unwrap_or(0);
+        let delta_quote_token =
+            checked_mul_shift_right(delta_quote_token_per_unit, user_position.liquidity)
+                .unwrap_or(0);
+
+        user_position.fee_unclaimed_base_token = delta_base_token;
+        user_position.fee_unclaimed_quote_token = delta_quote_token;
+    }
 
     user_position.fee_growth_checkpoint_base_token = current_base_growth;
     user_position.fee_growth_checkpoint_quote_token = current_quote_growth;
-
-    user_position.fee_unclaimed_base_token = delta_base_token;
-    user_position.fee_unclaimed_quote_token = delta_quote_token;
 }
 
 pub fn update_user_liquidity<'info>(

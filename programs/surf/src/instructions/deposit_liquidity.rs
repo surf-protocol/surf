@@ -20,7 +20,7 @@ pub fn handler(
 ) -> Result<()> {
     // 1. sync vault whirlpool position and user position
     let whirlpool = &mut ctx.accounts.whirlpool;
-    let whirlpool_position = &&ctx.accounts.whirlpool_position;
+    let whirlpool_position = &ctx.accounts.whirlpool_position;
     let tick_array_lower = &ctx.accounts.tick_array_lower;
     let tick_array_upper = &ctx.accounts.tick_array_upper;
     let whirlpool_program = &ctx.accounts.whirlpool_program;
@@ -123,6 +123,7 @@ pub struct DepositLiquidity<'info> {
             owner.key().as_ref(),
         ],
         bump = user_position.bump,
+        constraint = Some(user_position.whirlpool_position_id) == vault_state.current_whirlpool_position_id,
     )]
     pub user_position: Account<'info, UserPosition>,
 

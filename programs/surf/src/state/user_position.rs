@@ -56,4 +56,26 @@ impl UserPosition {
 
         Ok(())
     }
+
+    pub fn hedge(
+        &mut self,
+        collateral_amount: u64,
+        borrow_amount: u64,
+        borrow_amount_notional: u64,
+    ) -> Result<()> {
+        self.collateral_amount = self
+            .collateral_amount
+            .checked_add(collateral_amount)
+            .ok_or(SurfError::CollateralOverflow)?;
+        self.borrow_amount = self
+            .borrow_amount
+            .checked_add(borrow_amount)
+            .ok_or(SurfError::BorrowOverflow)?;
+        self.borrow_amount_notional = self
+            .borrow_amount_notional
+            .checked_add(borrow_amount_notional)
+            .ok_or(SurfError::BorrowNotionalOverflow)?;
+
+        Ok(())
+    }
 }
