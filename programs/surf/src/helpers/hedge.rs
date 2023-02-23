@@ -8,12 +8,10 @@ use crate::{
     utils::drift::get_global_interest,
 };
 
-pub fn sync_vault_interest_growths<'info>(
+pub fn sync_vault_collateral_interest_growth<'info>(
     vault_state: &mut Account<'info, VaultState>,
-    hedge_position: &mut HedgePosition,
     drift_subaccount: &User,
     collateral_spot_market: &SpotMarket,
-    borrow_spot_market: &SpotMarket,
 ) -> Result<()> {
     let global_collateral_interest = get_global_interest(
         vault_state.collateral_amount,
@@ -25,6 +23,14 @@ pub fn sync_vault_interest_growths<'info>(
         calculate_interest_per_unit(vault_state.collateral_amount, global_collateral_interest)?;
     vault_state.update_interest_growth(collateral_interest_growth);
 
+    Ok(())
+}
+
+pub fn sync_vault_borrow_interest_growth(
+    hedge_position: &mut HedgePosition,
+    drift_subaccount: &User,
+    borrow_spot_market: &SpotMarket,
+) -> Result<()> {
     let current_borrow_position = hedge_position.get_current_position();
     let global_borrow_interest = get_global_interest(
         current_borrow_position.borrowed_amount,
@@ -37,6 +43,19 @@ pub fn sync_vault_interest_growths<'info>(
         global_borrow_interest,
     )?;
     hedge_position.update_interest_growth(borrow_interest_growth);
+
+    Ok(())
+}
+
+pub fn sync_vault_interest_growths<'info>(
+    vault_state: &mut Account<'info, VaultState>,
+    hedge_position: &mut HedgePosition,
+    drift_subaccount: &User,
+    collateral_spot_market: &SpotMarket,
+    borrow_spot_market: &SpotMarket,
+) -> Result<()> {
+    sync_vault_collateral_interest_growth(vault_state, drift_subaccount, collateral_spot_market)?;
+    sync_vault_borrow_interest_growth(hedge_position, drift_subaccount, borrow_spot_market)?;
 
     Ok(())
 }
@@ -70,6 +89,17 @@ pub fn update_user_collateral_interest<'info>(
     user_position.collateral_interest_unclaimed =
         user_position.collateral_interest_unclaimed + interest_unclaimed;
     user_position.collateral_interest_growth_checkpoint = vault_state.collateral_interest_growth;
+
+    Ok(())
+}
+
+pub fn update_user_interests<'info>(
+    user_position: &mut Account<'info, UserPosition>,
+    vault_state: &Account<'info, VaultState>,
+    borrow_position: &BorrowPosition,
+) -> Result<()> {
+    update_user_borrow_interest(user_position, borrow_position)?;
+    update_user_collateral_interest(user_position, vault_state)?;
 
     Ok(())
 }

@@ -38,7 +38,7 @@ pub struct VaultState {
 }
 
 impl VaultState {
-    pub const LEN: usize = 8 + 344;
+    pub const LEN: usize = 8 + 328;
     pub const NAMESPACE: &'static [u8; 11] = b"vault_state";
 
     pub fn initialize(
@@ -90,5 +90,15 @@ impl VaultState {
     pub fn update_interest_growth(&mut self, collateral_interest_growth: u128) -> () {
         self.collateral_interest_growth =
             collateral_interest_growth + self.collateral_interest_growth_checkpoint;
+    }
+
+    pub fn claim_user_collateral_interest(&mut self, claimed_interest: u64) -> Result<()> {
+        let claimed_interest_shl = (claimed_interest as u128) << 64;
+        self.collateral_interest_growth_checkpoint = self
+            .collateral_interest_growth_checkpoint
+            .checked_add(claimed_interest_shl)
+            .ok_or(SurfError::CollateralInterestOverflow)?;
+
+        Ok(())
     }
 }

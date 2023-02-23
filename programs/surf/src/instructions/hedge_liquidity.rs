@@ -1,7 +1,7 @@
 use anchor_lang::prelude::*;
 use anchor_spl::token::{self as token_cpi, Token, TokenAccount, Transfer};
 use drift::{
-    cpi as drift_cpi,
+    cpi::{self as drift_cpi, accounts::UpdateSpotMarketCumulativeInterest},
     program::Drift,
     state::{
         spot_market::SpotMarket,
@@ -21,7 +21,7 @@ use crate::{
     errors::SurfError,
     helpers::hedge::{
         get_hedged_notional_amount, increase_vault_hedge_token_amounts,
-        sync_vault_interest_growths, update_user_borrow_interest, update_user_collateral_interest,
+        sync_vault_interest_growths, update_user_interests,
     },
     state::{HedgePosition, UserPosition, VaultState, WhirlpoolPosition},
     utils::orca::liquidity_math::{get_amount_delta_a_wrapped, get_amount_delta_b_wrapped},
@@ -29,7 +29,7 @@ use crate::{
 
 pub fn handler(ctx: Context<HedgeLiquidity>, borrow_amount: u64) -> Result<()> {
     // 1. validate user position
-    let user_position = &mut ctx.accounts.user_position;
+    let user_position = &ctx.accounts.user_position;
     let whirlpool_position = &ctx.accounts.vault_whirlpool_position;
     let mut hedge_position = ctx.accounts.vault_hedge_position.load_mut()?;
 
@@ -42,7 +42,16 @@ pub fn handler(ctx: Context<HedgeLiquidity>, borrow_amount: u64) -> Result<()> {
         hedge_position.current_borrow_position_index
     );
 
-    // 2. sync user position
+    drop(user_position);
+
+    // 2. update drift spot markets and sync user position
+    drift_cpi::update_spot_market_cumulative_interest(
+        ctx.accounts.update_borrow_spot_market_context(),
+    )?;
+    drift_cpi::update_spot_market_cumulative_interest(
+        ctx.accounts.update_collateral_spot_market_context(),
+    )?;
+
     let drift_subaccount = ctx.accounts.drift_subaccount.load()?;
     let drift_collateral_spot_market = ctx.accounts.drift_collateral_spot_market.load()?;
     let drift_base_token_spot_market = ctx.accounts.drift_borrow_spot_market.load()?;
@@ -54,12 +63,11 @@ pub fn handler(ctx: Context<HedgeLiquidity>, borrow_amount: u64) -> Result<()> {
         &drift_collateral_spot_market,
         &drift_base_token_spot_market,
     )?;
-
-    let borrow_position = hedge_position.get_current_position();
-    update_user_borrow_interest(user_position, &borrow_position)?;
-    update_user_collateral_interest(user_position, &ctx.accounts.vault_state)?;
-
-    drop(user_position);
+    update_user_interests(
+        &mut ctx.accounts.user_position,
+        &ctx.accounts.vault_state,
+        &hedge_position.get_current_position(),
+    )?;
 
     // 3. transfer collateral from user to vault
     let user_position = &ctx.accounts.user_position;
@@ -111,6 +119,7 @@ pub fn handler(ctx: Context<HedgeLiquidity>, borrow_amount: u64) -> Result<()> {
         true,
     )?;
 
+    // Should never happen
     if base_token_whirlpool_amount == 0 {
         return Err(SurfError::ZeroBaseTokenWhirlpoolAmount.into());
     }
@@ -178,6 +187,7 @@ pub struct HedgeLiquidity<'info> {
     pub user_position: Box<Account<'info, UserPosition>>,
 
     #[account(
+        mut,
         constraint = vault_state.hedge_positions_count > 0,
     )]
     pub vault_state: Box<Account<'info, VaultState>>,
@@ -225,6 +235,9 @@ pub struct HedgeLiquidity<'info> {
 
     /// CHECK: Drift program checks these accounts
     pub drift_base_token_oracle: UncheckedAccount<'info>,
+    /// CHECK: Drift program checks these accounts
+    pub drift_quote_token_oracle: UncheckedAccount<'info>,
+
     #[account(
         mut,
         seeds = [
@@ -292,6 +305,30 @@ impl<'info> HedgeLiquidity<'info> {
             tick_array2: self.swap_tick_array_2.to_account_info(),
             oracle: self.swap_oracle.to_account_info(),
             token_program: self.token_program.to_account_info(),
+        };
+        CpiContext::new(program.to_account_info(), accounts)
+    }
+
+    pub fn update_borrow_spot_market_context(
+        &self,
+    ) -> CpiContext<'_, '_, '_, 'info, UpdateSpotMarketCumulativeInterest<'info>> {
+        let program = &self.drift_program;
+        let accounts = UpdateSpotMarketCumulativeInterest {
+            state: self.drift_state.to_account_info(),
+            spot_market: self.drift_borrow_spot_market.to_account_info(),
+            oracle: self.drift_base_token_oracle.to_account_info(),
+        };
+        CpiContext::new(program.to_account_info(), accounts)
+    }
+
+    pub fn update_collateral_spot_market_context(
+        &self,
+    ) -> CpiContext<'_, '_, '_, 'info, UpdateSpotMarketCumulativeInterest<'info>> {
+        let program = &self.drift_program;
+        let accounts = UpdateSpotMarketCumulativeInterest {
+            state: self.drift_state.to_account_info(),
+            spot_market: self.drift_collateral_spot_market.to_account_info(),
+            oracle: self.drift_quote_token_oracle.to_account_info(),
         };
         CpiContext::new(program.to_account_info(), accounts)
     }

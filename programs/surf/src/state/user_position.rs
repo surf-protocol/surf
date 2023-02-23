@@ -78,4 +78,12 @@ impl UserPosition {
 
         Ok(())
     }
+
+    pub fn claim_borrow_interest(&mut self) -> () {
+        self.borrow_interest_unclaimed = 0;
+    }
+
+    pub fn claim_collateral_interest(&mut self) -> () {
+        self.collateral_interest_unclaimed = 0;
+    }
 }

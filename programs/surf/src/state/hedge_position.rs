@@ -51,8 +51,7 @@ impl HedgePosition {
     }
 
     pub fn hedge(&mut self, borrowed_amount: u64, borrowed_amount_notional: u64) -> Result<()> {
-        let ci = self.current_borrow_position_index as usize;
-        let mut borrow_position = self.borrow_positions[ci].borrow_mut();
+        let borrow_position = self.get_current_position_mut();
 
         borrow_position.borrowed_amount = borrow_position
             .borrowed_amount
@@ -74,7 +73,24 @@ impl HedgePosition {
         current_position.borrow_interest_growth = borrow_interest_growth + growth_checkpoint;
     }
 
+    pub fn claim_user_borrow_interest(&mut self, claimed_interest: u64) -> Result<()> {
+        let borrow_position = self.get_current_position_mut();
+        let claimed_interest_shl = (claimed_interest as u128) << 64;
+
+        borrow_position.borrow_interest_growth_checkpoint = borrow_position
+            .borrow_interest_growth_checkpoint
+            .checked_add(claimed_interest_shl)
+            .ok_or(SurfError::BorrowInterestOverflow)?;
+
+        Ok(())
+    }
+
     pub fn get_current_position(&self) -> BorrowPosition {
         self.borrow_positions[self.current_borrow_position_index as usize]
+    }
+
+    pub fn get_current_position_mut(&mut self) -> &mut BorrowPosition {
+        let ci = self.current_borrow_position_index as usize;
+        self.borrow_positions[ci].borrow_mut()
     }
 }

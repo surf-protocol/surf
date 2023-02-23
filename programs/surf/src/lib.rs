@@ -52,6 +52,10 @@ pub mod surf {
         deposit_liquidity::handler(ctx, liquidity_input, base_token_max, quote_token_max)
     }
 
+    pub fn hedge_liquidity(ctx: Context<HedgeLiquidity>, borrow_amount: u64) -> Result<()> {
+        hedge_liquidity::handler(ctx, borrow_amount)
+    }
+
     /// Synchronizes user whirlpool position fees, rewards and liquidity to match current state
     ///
     /// As vault whirlpool position adjusts, liquidity provided changes and needs to be stored
@@ -82,5 +86,13 @@ pub mod surf {
 
     pub fn collect_user_fees_and_rewards(ctx: Context<CollectUserFeesAndRewards>) -> Result<()> {
         collect_user_fees_and_rewards::handler(ctx)
+    }
+
+    pub fn claim_user_borrow_interest(ctx: Context<ClaimUserBorrowInterest>) -> Result<()> {
+        claim_user_interest::borrow::handler(ctx)
+    }
+
+    pub fn claim_user_collateral_interest(ctx: Context<ClaimUserCollateralInterest>) -> Result<()> {
+        claim_user_interest::collateral::handler(ctx)
     }
 }
