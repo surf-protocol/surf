@@ -65,12 +65,21 @@ impl HedgePosition {
         Ok(())
     }
 
-    pub fn update_interest_growth(&mut self, borrow_interest_growth: u128) -> () {
-        let current_position =
-            self.borrow_positions[self.current_borrow_position_index as usize].borrow_mut();
+    pub fn update_current_position_id(&mut self) -> Option<()> {
+        if self.current_borrow_position_index == 149 {
+            return None;
+        }
 
-        let growth_checkpoint = current_position.borrow_interest_growth_checkpoint;
-        current_position.borrow_interest_growth = borrow_interest_growth + growth_checkpoint;
+        self.current_borrow_position_index = self.current_borrow_position_index + 1;
+
+        Some(())
+    }
+
+    pub fn update_interest_growth(&mut self, borrow_interest_growth: u128) -> () {
+        let borrow_position = self.get_current_position_mut();
+
+        let growth_checkpoint = borrow_position.borrow_interest_growth_checkpoint;
+        borrow_position.borrow_interest_growth = borrow_interest_growth + growth_checkpoint;
     }
 
     pub fn claim_user_borrow_interest(&mut self, claimed_interest: u64) -> Result<()> {
@@ -85,6 +94,32 @@ impl HedgePosition {
         Ok(())
     }
 
+    pub fn update_diffs(
+        &mut self,
+        borrowed_diff: i64,
+        borrowed_diff_notional: i64,
+    ) -> Result<(u64, u64)> {
+        let borrow_position = self.get_current_position_mut();
+
+        borrow_position.borrowed_amount_diff = borrow_position
+            .borrowed_amount_diff
+            .checked_add(borrowed_diff)
+            .ok_or(SurfError::BorrowOverflow)?;
+        borrow_position.borrowed_amount_notional_diff = borrow_position
+            .borrowed_amount_notional_diff
+            .checked_add(borrowed_diff_notional)
+            .ok_or(SurfError::BorrowNotionalOverflow)?;
+
+        let new_borrowed_amount =
+            calculate_new_amount(borrow_position.borrowed_amount, borrowed_diff);
+        let new_borrowed_amount_notional = calculate_new_amount(
+            borrow_position.borrowed_amount_notional,
+            borrowed_diff_notional,
+        );
+
+        Ok((new_borrowed_amount, new_borrowed_amount_notional))
+    }
+
     pub fn get_current_position(&self) -> BorrowPosition {
         self.borrow_positions[self.current_borrow_position_index as usize]
     }
@@ -92,5 +127,14 @@ impl HedgePosition {
     pub fn get_current_position_mut(&mut self) -> &mut BorrowPosition {
         let ci = self.current_borrow_position_index as usize;
         self.borrow_positions[ci].borrow_mut()
+    }
+}
+
+fn calculate_new_amount(old_amount: u64, diff: i64) -> u64 {
+    let diff_abs = diff.unsigned_abs();
+    if diff.is_negative() {
+        old_amount - diff_abs
+    } else {
+        old_amount + diff_abs
     }
 }

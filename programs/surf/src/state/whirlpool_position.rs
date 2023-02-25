@@ -19,7 +19,7 @@ pub struct WhirlpoolPosition {
 
     pub upper_sqrt_price: u128,  // 16
     pub lower_sqrt_price: u128,  // 16
-    pub middle_sqrt_price: u128, //16
+    pub middle_sqrt_price: u128, // 16
 }
 
 impl WhirlpoolPosition {

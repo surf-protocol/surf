@@ -32,6 +32,7 @@ pub fn handler(ctx: Context<SyncWhirlpoolPosition>) -> Result<()> {
 
 #[derive(Accounts)]
 pub struct SyncWhirlpoolPosition<'info> {
+    // TODO: can be removed (?)
     pub payer: Signer<'info>,
 
     pub vault_state: Account<'info, VaultState>,

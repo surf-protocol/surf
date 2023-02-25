@@ -95,4 +95,12 @@ pub mod surf {
     pub fn claim_user_collateral_interest(ctx: Context<ClaimUserCollateralInterest>) -> Result<()> {
         claim_user_interest::collateral::handler(ctx)
     }
+
+    pub fn adjust_vault_hedge_above(ctx: Context<AdjustVaultHedgeAbove>) -> Result<()> {
+        adjust_vault_hedge::above::handler(ctx)
+    }
+
+    pub fn adjust_vault_hedge_below(ctx: Context<AdjustVaultHedgeBelow>) -> Result<()> {
+        adjust_vault_hedge::below::handler(ctx)
+    }
 }

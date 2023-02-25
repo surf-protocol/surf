@@ -34,11 +34,13 @@ pub struct VaultState {
     pub collateral_interest_growth_checkpoint: u128, // 16
 
     pub hedge_positions_count: u64,             // 8
-    pub current_hedge_position_id: Option<u64>, // 8
+    pub current_hedge_position_id: Option<u64>, // 16
+
+    pub last_hedge_adjustment_tick: Option<i32>, // 4
 }
 
 impl VaultState {
-    pub const LEN: usize = 8 + 328;
+    pub const LEN: usize = 8 + 336;
     pub const NAMESPACE: &'static [u8; 11] = b"vault_state";
 
     pub fn initialize(
@@ -75,16 +77,35 @@ impl VaultState {
         self.drift_subaccount = drift_subaccount;
     }
 
-    pub fn open_hedge_position(&mut self) -> Result<()> {
-        if None == self.current_hedge_position_id {
-            self.current_hedge_position_id = Some(0);
-        }
+    pub fn initialize_hedge_position(&mut self) -> Result<()> {
         self.hedge_positions_count = self
             .hedge_positions_count
             .checked_add(1)
             .ok_or(SurfError::HedgePositionIdOverflow)?;
 
         Ok(())
+    }
+
+    pub fn set_initial_hedge_position_id(&mut self) -> () {
+        self.current_hedge_position_id = Some(0);
+    }
+
+    /// Assumes initial position has already been set
+    /// as it should be called only post initial id set
+    pub fn update_hedge_position_id(&mut self) -> Result<()> {
+        let current_id = self.current_hedge_position_id;
+        self.current_hedge_position_id = Some(
+            current_id
+                .unwrap()
+                .checked_add(1)
+                .ok_or(SurfError::HedgePositionIdOverflow)?,
+        );
+
+        Ok(())
+    }
+
+    pub fn update_hedge_adjustment_tick(&mut self, tick: i32) -> () {
+        self.last_hedge_adjustment_tick = Some(tick);
     }
 
     pub fn update_interest_growth(&mut self, collateral_interest_growth: u128) -> () {

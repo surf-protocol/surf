@@ -14,7 +14,7 @@ use whirlpools::{
     program::Whirlpool as WhirlpoolProgram,
     TickArray, Whirlpool,
 };
-use whirlpools_client::math::MIN_SQRT_PRICE_X64;
+use whirlpools_client::math::{sqrt_price_from_tick_index, MIN_SQRT_PRICE_X64};
 
 use crate::{
     drift_deposit_collateral_context_impl, drift_withdraw_borrow_context_impl,
@@ -28,7 +28,6 @@ use crate::{
 };
 
 pub fn handler(ctx: Context<HedgeLiquidity>, borrow_amount: u64) -> Result<()> {
-    // 1. validate user position
     let user_position = &ctx.accounts.user_position;
     let whirlpool_position = &ctx.accounts.vault_whirlpool_position;
     let mut hedge_position = ctx.accounts.vault_hedge_position.load_mut()?;
@@ -44,7 +43,6 @@ pub fn handler(ctx: Context<HedgeLiquidity>, borrow_amount: u64) -> Result<()> {
 
     drop(user_position);
 
-    // 2. update drift spot markets and sync user position
     drift_cpi::update_spot_market_cumulative_interest(
         ctx.accounts.update_borrow_spot_market_context(),
     )?;
@@ -69,7 +67,6 @@ pub fn handler(ctx: Context<HedgeLiquidity>, borrow_amount: u64) -> Result<()> {
         &hedge_position.get_current_position(),
     )?;
 
-    // 3. transfer collateral from user to vault
     let user_position = &ctx.accounts.user_position;
 
     let lower_sqrt_price = whirlpool_position.lower_sqrt_price;
@@ -101,7 +98,6 @@ pub fn handler(ctx: Context<HedgeLiquidity>, borrow_amount: u64) -> Result<()> {
             collateral_amount,
         )?;
 
-        // 4. deposit collateral
         drift_cpi::deposit(
             ctx.accounts.drift_deposit_collateral_context(),
             0_u16,
@@ -110,10 +106,18 @@ pub fn handler(ctx: Context<HedgeLiquidity>, borrow_amount: u64) -> Result<()> {
         )?;
     }
 
-    // 5. borrow base token
+    if ctx.accounts.vault_state.last_hedge_adjustment_tick == None {
+        let current_tick = ctx.accounts.whirlpool.tick_current_index;
+        ctx.accounts
+            .vault_state
+            .update_hedge_adjustment_tick(current_tick);
+    }
+
+    let hedge_adjustment_tick = ctx.accounts.vault_state.last_hedge_adjustment_tick.unwrap();
+    let hedge_adjustment_sqrt_price = sqrt_price_from_tick_index(hedge_adjustment_tick);
     let upper_sqrt_price = whirlpool_position.upper_sqrt_price;
     let base_token_whirlpool_amount = get_amount_delta_a_wrapped(
-        middle_sqrt_price,
+        hedge_adjustment_sqrt_price,
         upper_sqrt_price,
         user_position.liquidity,
         true,
@@ -135,7 +139,6 @@ pub fn handler(ctx: Context<HedgeLiquidity>, borrow_amount: u64) -> Result<()> {
         false,
     )?;
 
-    // 6. sell borrowed tokens
     whirlpool_cpi::swap(
         ctx.accounts.swap_context(),
         borrow_amount,
@@ -145,7 +148,6 @@ pub fn handler(ctx: Context<HedgeLiquidity>, borrow_amount: u64) -> Result<()> {
         true,
     )?;
 
-    // 7. update program accounts
     let borrow_amount_notional =
         get_hedged_notional_amount(&mut ctx.accounts.vault_quote_token_account)?;
 
@@ -185,6 +187,11 @@ pub struct HedgeLiquidity<'info> {
         bump = user_position.bump,
     )]
     pub user_position: Box<Account<'info, UserPosition>>,
+
+    #[account(
+        address = vault_state.whirlpool,
+    )]
+    pub whirlpool: Box<Account<'info, Whirlpool>>,
 
     #[account(
         mut,

@@ -44,6 +44,8 @@ pub enum SurfError {
     InvalidHedgePosition,
     #[msg("Hedge position id overflow")]
     HedgePositionIdOverflow,
+    #[msg("Borrow position id overflow")]
+    BorrowPositionIndexOverflow,
 
     #[msg("Position can not be open on inactive vault")]
     UserPositionCanNotBeOpen,
@@ -79,6 +81,12 @@ pub enum SurfError {
     CollateralInterestOverflow,
     #[msg("Borrow interest overflow")]
     BorrowInterestOverflow,
+
+    #[msg("Hedge position can not be adjusted until it is not out of hedge tick range")]
+    HedgePositionNotOutOfHedgeTickRange,
+
+    #[msg("Missing next hedge position account")]
+    MissingNextHedgePositionAccount,
 
     // Math
     #[msg("Input quote amount is too high")]

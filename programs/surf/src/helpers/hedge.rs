@@ -195,6 +195,23 @@ pub fn get_hedged_notional_amount<'info>(
     Ok(post_amount - pre_amount)
 }
 
+pub fn get_notional_amount_diff<'info>(
+    vault_quote_token_account: &mut Account<'info, TokenAccount>,
+    is_positive: bool,
+) -> Result<i64> {
+    let pre_amount = vault_quote_token_account.amount;
+    vault_quote_token_account.reload()?;
+    let post_amount = vault_quote_token_account.amount;
+
+    let diff = (pre_amount as i64) - (post_amount as i64);
+
+    if is_positive {
+        Ok(diff)
+    } else {
+        Ok(-diff)
+    }
+}
+
 pub fn increase_vault_hedge_token_amounts<'info>(
     vault_state: &mut Account<'info, VaultState>,
     hedge_position: &mut HedgePosition,

@@ -12,7 +12,13 @@ pub fn handler(ctx: Context<OpenHedgePosition>) -> Result<()> {
         id,
     );
 
-    ctx.accounts.vault_state.open_hedge_position()?;
+    let vault_state = &mut ctx.accounts.vault_state;
+
+    if vault_state.hedge_positions_count == 0 {
+        vault_state.set_initial_hedge_position_id();
+    }
+
+    vault_state.initialize_hedge_position()?;
 
     Ok(())
 }
