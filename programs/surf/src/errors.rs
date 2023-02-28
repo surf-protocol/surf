@@ -42,6 +42,8 @@ pub enum SurfError {
 
     #[msg("Hedge position does not correspond to vault state")]
     InvalidHedgePosition,
+    #[msg("Whirlpool position id overflow")]
+    WhirlpoolPositionIdOverflow,
     #[msg("Hedge position id overflow")]
     HedgePositionIdOverflow,
     #[msg("Borrow position id overflow")]
@@ -82,8 +84,13 @@ pub enum SurfError {
     #[msg("Borrow interest overflow")]
     BorrowInterestOverflow,
 
+    #[msg("Sqrt price is not out of bounds")]
+    SqrtPriceNotOutOfBounds,
+
     #[msg("Hedge position can not be adjusted until it is not out of hedge tick range")]
     HedgePositionNotOutOfHedgeTickRange,
+    #[msg("Whirlpool adjustment is not valid")]
+    InvalidWhirlpoolAdjustmentState,
 
     #[msg("Missing next hedge position account")]
     MissingNextHedgePositionAccount,

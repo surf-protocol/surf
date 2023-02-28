@@ -5,52 +5,38 @@ use whirlpools::{
     program::Whirlpool as WhirlpoolProgram,
     OpenPositionBumps, Whirlpool,
 };
-use whirlpools_client::math::sqrt_price_from_tick_index;
 
 use crate::{
     errors::SurfError,
     state::{AdminConfig, VaultState, WhirlpoolPosition},
     utils::{
         constraints::is_admin,
-        orca::tick_math::{get_initializable_tick_index, MAX_TICK_INDEX, MIN_TICK_INDEX},
+        tick_range::{calculate_whirlpool_and_inner_bounds, validate_bounds},
     },
 };
 
 pub fn handler(ctx: Context<OpenWhirlpoolPosition>, position_bump: u8) -> Result<()> {
-    let full_tick_range = ctx.accounts.vault_state.full_tick_range;
-    let one_side_tick_range = (full_tick_range / 2) as i32;
+    // Open only if no position was opened yet
+    // TODO: Add error
+    require_eq!(ctx.accounts.vault_state.whirlpool_positions_count, 0);
+
+    let vault_state = &ctx.accounts.vault_state;
 
     let whirlpool = &ctx.accounts.whirlpool;
-    let current_tick_index = whirlpool.tick_current_index;
-    let tick_upper_index = current_tick_index + one_side_tick_range;
-    let tick_lower_index = current_tick_index - one_side_tick_range;
 
-    let tick_spacing = whirlpool.tick_spacing;
-    let tick_upper_initializable = get_initializable_tick_index(tick_upper_index, tick_spacing);
-    let tick_lower_initializable = get_initializable_tick_index(tick_lower_index, tick_spacing);
+    let (whirlpool_range_bounds, inner_range_bounds, middle_sqrt_price) =
+        calculate_whirlpool_and_inner_bounds(vault_state, whirlpool);
 
-    if tick_upper_initializable > MAX_TICK_INDEX {
-        return Err(SurfError::UpperTickIndexOutOfBounds.into());
-    }
-    if tick_lower_initializable < MIN_TICK_INDEX {
-        return Err(SurfError::LowerTickIndexOutOfBounds.into());
-    }
+    validate_bounds(&whirlpool_range_bounds, &inner_range_bounds)?;
 
     whirlpool_cpi::open_position(
         ctx.accounts.open_whirlpool_position_context(),
         OpenPositionBumps { position_bump },
-        tick_lower_initializable,
-        tick_upper_initializable,
+        whirlpool_range_bounds.lower_tick_index,
+        whirlpool_range_bounds.upper_tick_index,
     )?;
 
     let vault_whirlpool_position_bump = *ctx.bumps.get("vault_whirlpool_position").unwrap();
-    let vault_state = &mut ctx.accounts.vault_state;
-    let whirlpool = &ctx.accounts.whirlpool;
-
-    let middle_tick_index = (tick_upper_initializable + tick_lower_initializable) / 2;
-    let middle_sqrt_price = sqrt_price_from_tick_index(middle_tick_index);
-    let upper_sqrt_price = sqrt_price_from_tick_index(tick_upper_initializable);
-    let lower_sqrt_price = sqrt_price_from_tick_index(tick_lower_initializable);
 
     ctx.accounts.vault_whirlpool_position.open(
         vault_whirlpool_position_bump,
@@ -60,12 +46,14 @@ pub fn handler(ctx: Context<OpenWhirlpoolPosition>, position_bump: u8) -> Result
         0,
         whirlpool.fee_growth_global_a,
         whirlpool.fee_growth_global_b,
-        upper_sqrt_price,
-        lower_sqrt_price,
+        whirlpool_range_bounds.upper_sqrt_price,
+        whirlpool_range_bounds.lower_sqrt_price,
         middle_sqrt_price,
+        inner_range_bounds.upper_sqrt_price,
+        inner_range_bounds.lower_sqrt_price,
     );
 
-    vault_state.current_whirlpool_position_id = Some(vault_state.whirlpool_positions_count);
+    ctx.accounts.vault_state.open_whirlpool_position()?;
 
     Ok(())
 }

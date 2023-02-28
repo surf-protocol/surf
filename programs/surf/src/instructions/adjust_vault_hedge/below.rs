@@ -24,18 +24,18 @@ use crate::{
         get_borrowed_amount_diff, update_program_accounts,
         update_spot_market_and_sync_borrow_interest_growth, validate_next_hedge_position,
     },
-    state::{HedgePosition, VaultState, WhirlpoolPosition},
+    state::{HedgePosition, VaultState, WhirlpoolAdjustmentState, WhirlpoolPosition},
 };
 
 pub fn handler(ctx: Context<AdjustVaultHedgeBelow>) -> Result<()> {
     let mut hedge_position = ctx.accounts.current_vault_hedge_position.load_mut()?;
     let next_hedge_position_ai = &ctx.accounts.next_vault_hedge_position;
+    let vault_state = &ctx.accounts.vault_state;
 
     validate_next_hedge_position(&hedge_position, next_hedge_position_ai.key())?;
     require_neq!(hedge_position.get_current_position().borrowed_amount, 0);
 
     let whirlpool = &ctx.accounts.whirlpool;
-    let vault_state = &ctx.accounts.vault_state;
 
     let current_tick = whirlpool.tick_current_index;
 
@@ -43,10 +43,14 @@ pub fn handler(ctx: Context<AdjustVaultHedgeBelow>) -> Result<()> {
     let hedge_tick_range = vault_state.hedge_tick_range as i32;
     let new_hedge_adjustment_tick = last_hedge_adjustment_tick - hedge_tick_range;
 
-    require!(
-        current_tick < new_hedge_adjustment_tick,
-        SurfError::HedgePositionNotOutOfHedgeTickRange
-    );
+    if vault_state.whirlpool_adjustment_state == WhirlpoolAdjustmentState::None {
+        require!(
+            current_tick < new_hedge_adjustment_tick,
+            SurfError::HedgePositionNotOutOfHedgeTickRange
+        );
+    } else if vault_state.whirlpool_adjustment_state != WhirlpoolAdjustmentState::Above {
+        return Err(SurfError::InvalidWhirlpoolAdjustmentState.into());
+    }
 
     let drift_subaccount = ctx.accounts.drift_subaccount.load()?;
 

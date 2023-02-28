@@ -9,7 +9,7 @@ use whirlpools::Whirlpool;
 use crate::{
     errors::SurfError,
     helpers::hedge::sync_vault_borrow_interest_growth,
-    state::{HedgePosition, VaultState, WhirlpoolPosition},
+    state::{HedgePosition, VaultState, WhirlpoolAdjustmentState, WhirlpoolPosition},
     utils::orca::liquidity_math::get_amount_delta_a_wrapped,
 };
 
@@ -107,6 +107,7 @@ pub fn update_program_accounts<'info>(
     }
 
     vault_state.update_hedge_adjustment_tick(current_tick);
+    vault_state.update_whirlpool_adjustment_state(WhirlpoolAdjustmentState::None);
 
     Ok(())
 }

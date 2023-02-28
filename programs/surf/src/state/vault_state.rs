@@ -1,6 +1,19 @@
-use anchor_lang::prelude::*;
+use anchor_lang::prelude::{borsh, *};
 
 use crate::errors::SurfError;
+
+#[derive(AnchorDeserialize, AnchorSerialize, Clone, Copy, PartialEq)]
+pub enum WhirlpoolAdjustmentState {
+    None,
+    Above,
+    Below,
+}
+
+impl Default for WhirlpoolAdjustmentState {
+    fn default() -> Self {
+        WhirlpoolAdjustmentState::None
+    }
+}
 
 #[account]
 #[derive(Default)]
@@ -22,8 +35,9 @@ pub struct VaultState {
     pub hedge_tick_range: u32, // 4
 
     // WHIRLPOOL DATA
-    pub whirlpool_positions_count: u64,             // 16
-    pub current_whirlpool_position_id: Option<u64>, // 16
+    pub whirlpool_positions_count: u64,                       // 16
+    pub current_whirlpool_position_id: Option<u64>,           // 16
+    pub whirlpool_adjustment_state: WhirlpoolAdjustmentState, // 1
 
     // HEDGE DATA
     pub drift_stats: Pubkey,      // 32
@@ -75,6 +89,23 @@ impl VaultState {
         // HEDGE DATA
         self.drift_stats = drift_stats;
         self.drift_subaccount = drift_subaccount;
+    }
+
+    pub fn open_whirlpool_position(&mut self) -> Result<()> {
+        self.current_whirlpool_position_id = Some(self.whirlpool_positions_count);
+        self.whirlpool_positions_count = self
+            .whirlpool_positions_count
+            .checked_add(1)
+            .ok_or(SurfError::WhirlpoolPositionIdOverflow)?;
+
+        Ok(())
+    }
+
+    pub fn update_whirlpool_adjustment_state(
+        &mut self,
+        updated_state: WhirlpoolAdjustmentState,
+    ) -> () {
+        self.whirlpool_adjustment_state = updated_state;
     }
 
     pub fn initialize_hedge_position(&mut self) -> Result<()> {

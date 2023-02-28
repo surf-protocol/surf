@@ -103,4 +103,11 @@ pub mod surf {
     pub fn adjust_vault_hedge_below(ctx: Context<AdjustVaultHedgeBelow>) -> Result<()> {
         adjust_vault_hedge::below::handler(ctx)
     }
+
+    pub fn adjust_whirlpool_position(
+        ctx: Context<AdjustWhirlpoolPosition>,
+        next_position_bump: u8,
+    ) -> Result<()> {
+        adjust_whirlpool_position::handler(ctx, next_position_bump)
+    }
 }

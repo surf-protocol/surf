@@ -20,10 +20,13 @@ pub struct WhirlpoolPosition {
     pub upper_sqrt_price: u128,  // 16
     pub lower_sqrt_price: u128,  // 16
     pub middle_sqrt_price: u128, // 16
+
+    pub inner_upper_sqrt_price: u128, // 16
+    pub inner_lower_sqrt_price: u128, // 16
 }
 
 impl WhirlpoolPosition {
-    pub const LEN: usize = 8 + 192;
+    pub const LEN: usize = 8 + 224;
     pub const NAMESPACE: &'static [u8; 18] = b"whirlpool_position";
 
     pub fn open(
@@ -38,6 +41,9 @@ impl WhirlpoolPosition {
         upper_sqrt_price: u128,
         lower_sqrt_price: u128,
         middle_sqrt_price: u128,
+
+        inner_upper_sqrt_price: u128,
+        inner_lower_sqrt_price: u128,
     ) -> () {
         self.bump = bump;
         self.vault_state = vault_state;
@@ -52,6 +58,13 @@ impl WhirlpoolPosition {
         self.upper_sqrt_price = upper_sqrt_price;
         self.lower_sqrt_price = lower_sqrt_price;
         self.middle_sqrt_price = middle_sqrt_price;
+
+        self.inner_upper_sqrt_price = inner_upper_sqrt_price;
+        self.inner_lower_sqrt_price = inner_lower_sqrt_price;
+    }
+
+    pub fn update_liquidity_diff(&mut self, liquidity_diff: i128) -> () {
+        self.liquidity_diff = liquidity_diff;
     }
 
     pub fn deposit_liquidity(&mut self, liquidity_input: u128) -> Result<()> {

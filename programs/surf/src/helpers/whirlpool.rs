@@ -1,6 +1,9 @@
 use anchor_lang::prelude::*;
 use whirlpools::{
-    cpi::{self as whirlpool_cpi, accounts::UpdateFeesAndRewards},
+    cpi::{
+        self as whirlpool_cpi,
+        accounts::{CollectFees, UpdateFeesAndRewards},
+    },
     program::Whirlpool as WhirlpoolProgram,
     Position as WhirlpoolPosition, TickArray, Whirlpool,
 };
@@ -35,6 +38,23 @@ pub fn sync_vault_whirlpool_position<'info>(
     vault_whirlpool_position.quote_token_fee_growth = whirlpool.fee_growth_global_b;
 
     Ok(())
+}
+
+pub trait CollectWhirlpoolFeesAndRewardsContext<'info> {
+    fn collect_whirlpool_fees_and_rewards_context(
+        &self,
+    ) -> CpiContext<'_, '_, '_, 'info, CollectFees<'info>>;
+}
+
+pub fn transfer_whirlpool_fees_and_rewards_to_vault<
+    'info,
+    T: CollectWhirlpoolFeesAndRewardsContext<'info>,
+>(
+    ctx: &Context<T>,
+) -> Result<()> {
+    whirlpool_cpi::collect_fees(ctx.accounts.collect_whirlpool_fees_and_rewards_context())
+
+    // TODO: Collect rewards if needed
 }
 
 pub fn update_user_fees_and_rewards<'info>(
