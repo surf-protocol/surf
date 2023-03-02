@@ -1,5 +1,5 @@
 use anchor_lang::prelude::*;
-use drift::cpi::accounts::{Deposit, Withdraw};
+use drift::cpi::accounts::{Deposit, UpdateSpotMarketCumulativeInterest, Withdraw};
 
 pub trait DriftDepositCollateralContext<'info> {
     fn drift_deposit_collateral_context(&self) -> CpiContext<'_, '_, '_, 'info, Deposit<'info>>;
@@ -15,6 +15,18 @@ pub trait DriftWithdrawBorrowContext<'info> {
 
 pub trait DriftDepositBorrowContext<'info> {
     fn drift_deposit_borrow_context(&self) -> CpiContext<'_, '_, '_, 'info, Deposit<'info>>;
+}
+
+pub trait UpdateBorrowSpotMarketContext<'info> {
+    fn update_borrow_spot_market_context(
+        &self,
+    ) -> CpiContext<'_, '_, '_, 'info, UpdateSpotMarketCumulativeInterest<'info>>;
+}
+
+pub trait UpdateCollateralSpotMarketContext<'info> {
+    fn update_collateral_spot_market_context(
+        &self,
+    ) -> CpiContext<'_, '_, '_, 'info, UpdateSpotMarketCumulativeInterest<'info>>;
 }
 
 #[macro_export]
@@ -134,6 +146,50 @@ macro_rules! drift_deposit_borrow_context_impl {
                     self.drift_base_token_oracle.to_account_info(),
                     self.drift_borrow_spot_market.to_account_info(),
                 ])
+            }
+        }
+    };
+}
+
+#[macro_export]
+macro_rules! update_borrow_spot_market_context_impl {
+    ($struct_name:ident) => {
+        use drift::cpi::accounts::UpdateSpotMarketCumulativeInterest;
+
+        use crate::macros::UpdateBorrowSpotMarketContext;
+
+        impl<'info> UpdateBorrowSpotMarketContext<'info> for $struct_name<'info> {
+            fn update_borrow_spot_market_context(
+                &self,
+            ) -> CpiContext<'_, '_, '_, 'info, UpdateSpotMarketCumulativeInterest<'info>> {
+                let program = &self.drift_program;
+                let accounts = UpdateSpotMarketCumulativeInterest {
+                    state: self.drift_state.to_account_info(),
+                    spot_market: self.drift_borrow_spot_market.to_account_info(),
+                    oracle: self.drift_base_token_oracle.to_account_info(),
+                };
+                CpiContext::new(program.to_account_info(), accounts)
+            }
+        }
+    };
+}
+
+#[macro_export]
+macro_rules! update_collateral_spot_market_context_impl {
+    ($struct_name:ident) => {
+        use crate::macros::UpdateCollateralSpotMarketContext;
+
+        impl<'info> UpdateCollateralSpotMarketContext<'info> for $struct_name<'info> {
+            fn update_collateral_spot_market_context(
+                &self,
+            ) -> CpiContext<'_, '_, '_, 'info, UpdateSpotMarketCumulativeInterest<'info>> {
+                let program = &self.drift_program;
+                let accounts = UpdateSpotMarketCumulativeInterest {
+                    state: self.drift_state.to_account_info(),
+                    spot_market: self.drift_collateral_spot_market.to_account_info(),
+                    oracle: self.drift_quote_token_oracle.to_account_info(),
+                };
+                CpiContext::new(program.to_account_info(), accounts)
             }
         }
     };

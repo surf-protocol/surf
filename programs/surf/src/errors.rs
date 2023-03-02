@@ -69,6 +69,12 @@ pub enum SurfError {
 
     #[msg("User position does not have any liquidity")]
     ZeroLiquidity,
+    #[msg("User position does not have any collateral")]
+    ZeroCollateral,
+    #[msg("User position does not have any borrow")]
+    ZeroBorrow,
+    #[msg("Borrow amount must be lower or equal to the user borrow")]
+    InvalidBorrowAmount,
     #[msg("Current base token amount in whirlpool is zero, can not hedge 0")]
     ZeroBaseTokenWhirlpoolAmount,
     #[msg("Collateral amount overflow")]

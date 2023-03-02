@@ -52,8 +52,8 @@ pub mod surf {
         deposit_liquidity::handler(ctx, liquidity_input, base_token_max, quote_token_max)
     }
 
-    pub fn hedge_liquidity(ctx: Context<HedgeLiquidity>, borrow_amount: u64) -> Result<()> {
-        hedge_liquidity::handler(ctx, borrow_amount)
+    pub fn hedge_liquidity(ctx: Context<IncreaseLiquidityHedge>, borrow_amount: u64) -> Result<()> {
+        increase_liquidity_hedge::handler(ctx, borrow_amount)
     }
 
     /// Synchronizes user whirlpool position fees, rewards and liquidity to match current state

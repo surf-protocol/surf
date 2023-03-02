@@ -27,7 +27,7 @@ use crate::{
     utils::orca::liquidity_math::{get_amount_delta_a_wrapped, get_amount_delta_b_wrapped},
 };
 
-pub fn handler(ctx: Context<HedgeLiquidity>, borrow_amount: u64) -> Result<()> {
+pub fn handler(ctx: Context<IncreaseLiquidityHedge>, borrow_amount: u64) -> Result<()> {
     let user_position = &ctx.accounts.user_position;
     let whirlpool_position = &ctx.accounts.vault_whirlpool_position;
     let mut hedge_position = ctx.accounts.vault_hedge_position.load_mut()?;
@@ -72,6 +72,7 @@ pub fn handler(ctx: Context<HedgeLiquidity>, borrow_amount: u64) -> Result<()> {
     let lower_sqrt_price = whirlpool_position.lower_sqrt_price;
     let middle_sqrt_price = whirlpool_position.middle_sqrt_price;
 
+    // TODO: Should be * 2
     let required_collateral_amount = get_amount_delta_b_wrapped(
         lower_sqrt_price,
         middle_sqrt_price,
@@ -159,15 +160,17 @@ pub fn handler(ctx: Context<HedgeLiquidity>, borrow_amount: u64) -> Result<()> {
         borrow_amount_notional,
     )?;
 
-    ctx.accounts
-        .user_position
-        .hedge(collateral_amount, borrow_amount, borrow_amount_notional)?;
+    ctx.accounts.user_position.increase_hedge(
+        collateral_amount,
+        borrow_amount,
+        borrow_amount_notional,
+    )?;
 
     Ok(())
 }
 
 #[derive(Accounts)]
-pub struct HedgeLiquidity<'info> {
+pub struct IncreaseLiquidityHedge<'info> {
     pub owner: Signer<'info>,
 
     #[account(
@@ -297,7 +300,7 @@ pub struct HedgeLiquidity<'info> {
     pub token_program: Program<'info, Token>,
 }
 
-impl<'info> HedgeLiquidity<'info> {
+impl<'info> IncreaseLiquidityHedge<'info> {
     pub fn swap_context(&self) -> CpiContext<'_, '_, '_, 'info, Swap<'info>> {
         let program = &self.whirlpool_program;
         let accounts = Swap {
@@ -341,5 +344,5 @@ impl<'info> HedgeLiquidity<'info> {
     }
 }
 
-drift_deposit_collateral_context_impl!(HedgeLiquidity);
-drift_withdraw_borrow_context_impl!(HedgeLiquidity);
+drift_deposit_collateral_context_impl!(IncreaseLiquidityHedge);
+drift_withdraw_borrow_context_impl!(IncreaseLiquidityHedge);

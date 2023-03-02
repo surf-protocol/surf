@@ -212,6 +212,22 @@ pub fn get_notional_amount_diff<'info>(
     }
 }
 
+/// Get amount difference of token account after CPI call
+pub fn get_token_amount_diff<'info>(
+    token_account: &mut Account<'info, TokenAccount>,
+    is_positive: bool,
+) -> Result<u64> {
+    let pre_amount = token_account.amount;
+    token_account.reload()?;
+    let post_amount = token_account.amount;
+
+    if is_positive {
+        Ok(post_amount - pre_amount)
+    } else {
+        Ok(pre_amount - post_amount)
+    }
+}
+
 pub fn increase_vault_hedge_token_amounts<'info>(
     vault_state: &mut Account<'info, VaultState>,
     hedge_position: &mut HedgePosition,
@@ -224,7 +240,24 @@ pub fn increase_vault_hedge_token_amounts<'info>(
         .checked_add(collateral_amount)
         .ok_or(SurfError::CollateralOverflow)?;
 
-    hedge_position.hedge(borrow_amount, borrow_amount_notional)?;
+    hedge_position.increase_hedge(borrow_amount, borrow_amount_notional)?;
+
+    Ok(())
+}
+
+pub fn decrease_vault_hedge_token_amounts<'info>(
+    vault_state: &mut Account<'info, VaultState>,
+    hedge_position: &mut HedgePosition,
+    collateral_amount: u64,
+    borrow_amount: u64,
+    borrow_amount_notional: u64,
+) -> Result<()> {
+    vault_state.collateral_amount = vault_state
+        .collateral_amount
+        .checked_sub(collateral_amount)
+        .ok_or(SurfError::CollateralOverflow)?;
+
+    hedge_position.decrease_hedge(borrow_amount, borrow_amount_notional)?;
 
     Ok(())
 }

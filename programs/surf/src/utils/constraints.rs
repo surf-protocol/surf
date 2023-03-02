@@ -3,7 +3,7 @@ use whirlpools::Whirlpool;
 
 use crate::{
     errors::SurfError,
-    state::{AdminConfig, HedgePosition, VaultState},
+    state::{AdminConfig, HedgePosition, UserPosition, VaultState, WhirlpoolPosition},
 };
 
 pub fn is_admin<'info>(admin_config: &Account<'info, AdminConfig>, admin: &Signer<'info>) -> bool {
@@ -46,6 +46,26 @@ pub fn validate_hedge_position<'info>(
         required_pk,
         SurfError::InvalidHedgePosition
     );
+
+    Ok(())
+}
+
+pub fn validate_user_position_sync<'info>(
+    user_position: &Account<'info, UserPosition>,
+    hedge_position: Option<&HedgePosition>,
+    whirlpool_position: Option<&Account<'info, WhirlpoolPosition>>,
+) -> Result<()> {
+    if let Some(hp) = hedge_position {
+        require_eq!(user_position.hedge_position_id, hp.id);
+        require_eq!(
+            user_position.borrow_position_index,
+            hp.current_borrow_position_index
+        );
+    }
+
+    if let Some(wp) = whirlpool_position {
+        require_eq!(user_position.whirlpool_position_id, wp.id);
+    }
 
     Ok(())
 }

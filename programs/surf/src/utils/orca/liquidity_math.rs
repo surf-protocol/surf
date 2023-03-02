@@ -9,9 +9,9 @@ pub fn get_amount_delta_a_wrapped(
     sqrt_price_0: u128,
     sqrt_price_1: u128,
     liquidity: u128,
-    round_up: bool,
+    deposit: bool,
 ) -> Result<u64> {
-    let delta_a = get_amount_delta_a(sqrt_price_0, sqrt_price_1, liquidity, round_up);
+    let delta_a = get_amount_delta_a(sqrt_price_0, sqrt_price_1, liquidity, deposit);
     if let Err(err) = delta_a {
         return Err(transform_error(err).into());
     }
@@ -22,9 +22,9 @@ pub fn get_amount_delta_b_wrapped(
     sqrt_price_0: u128,
     sqrt_price_1: u128,
     liquidity: u128,
-    round_up: bool,
+    deposit: bool,
 ) -> Result<u64> {
-    let delta_b = get_amount_delta_b(sqrt_price_0, sqrt_price_1, liquidity, round_up);
+    let delta_b = get_amount_delta_b(sqrt_price_0, sqrt_price_1, liquidity, deposit);
     if let Err(err) = delta_b {
         return Err(transform_error(err).into());
     }

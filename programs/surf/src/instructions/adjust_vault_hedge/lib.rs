@@ -92,7 +92,7 @@ pub fn update_program_accounts<'info>(
 
     if let Some(_) = update_id_res {
         hedge_position
-            .hedge(updated_borrowed_amount, updated_borrowed_amount_notional)
+            .increase_hedge(updated_borrowed_amount, updated_borrowed_amount_notional)
             .ok();
     } else {
         let next_hedge_position_loader =
@@ -100,7 +100,7 @@ pub fn update_program_accounts<'info>(
         let mut next_hedge_position = next_hedge_position_loader.load_mut()?;
 
         next_hedge_position
-            .hedge(updated_borrowed_amount, updated_borrowed_amount_notional)
+            .increase_hedge(updated_borrowed_amount, updated_borrowed_amount_notional)
             .ok();
 
         vault_state.update_hedge_position_id()?;

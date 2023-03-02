@@ -50,7 +50,11 @@ impl HedgePosition {
         self.id = id;
     }
 
-    pub fn hedge(&mut self, borrowed_amount: u64, borrowed_amount_notional: u64) -> Result<()> {
+    pub fn increase_hedge(
+        &mut self,
+        borrowed_amount: u64,
+        borrowed_amount_notional: u64,
+    ) -> Result<()> {
         let borrow_position = self.get_current_position_mut();
 
         borrow_position.borrowed_amount = borrow_position
@@ -60,6 +64,25 @@ impl HedgePosition {
         borrow_position.borrowed_amount_notional = borrow_position
             .borrowed_amount_notional
             .checked_add(borrowed_amount_notional)
+            .ok_or(SurfError::BorrowNotionalOverflow)?;
+
+        Ok(())
+    }
+
+    pub fn decrease_hedge(
+        &mut self,
+        borrowed_amount: u64,
+        borrowed_amount_notional: u64,
+    ) -> Result<()> {
+        let borrow_position = self.get_current_position_mut();
+
+        borrow_position.borrowed_amount = borrow_position
+            .borrowed_amount
+            .checked_sub(borrowed_amount)
+            .ok_or(SurfError::BorrowOverflow)?;
+        borrow_position.borrowed_amount_notional = borrow_position
+            .borrowed_amount_notional
+            .checked_sub(borrowed_amount_notional)
             .ok_or(SurfError::BorrowNotionalOverflow)?;
 
         Ok(())

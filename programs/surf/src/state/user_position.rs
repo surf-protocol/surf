@@ -57,7 +57,7 @@ impl UserPosition {
         Ok(())
     }
 
-    pub fn hedge(
+    pub fn increase_hedge(
         &mut self,
         collateral_amount: u64,
         borrow_amount: u64,
@@ -75,6 +75,31 @@ impl UserPosition {
             .borrow_amount_notional
             .checked_add(borrow_amount_notional)
             .ok_or(SurfError::BorrowNotionalOverflow)?;
+
+        Ok(())
+    }
+
+    pub fn decrease_hedge(
+        &mut self,
+        collateral_amount: u64,
+        borrow_amount: u64,
+        borrow_amount_notional: u64,
+    ) -> Result<()> {
+        self.collateral_amount = self
+            .collateral_amount
+            .checked_sub(collateral_amount)
+            .ok_or(SurfError::CollateralOverflow)?;
+        self.borrow_amount = self
+            .borrow_amount
+            .checked_sub(borrow_amount)
+            .ok_or(SurfError::BorrowOverflow)?;
+        self.borrow_amount_notional = self
+            .borrow_amount_notional
+            .checked_sub(borrow_amount_notional)
+            .ok_or(SurfError::BorrowNotionalOverflow)?;
+
+        self.collateral_interest_unclaimed = 0;
+        self.borrow_interest_unclaimed = 0;
 
         Ok(())
     }
