@@ -19,7 +19,7 @@ use whirlpools_client::math::MIN_SQRT_PRICE_X64;
 use crate::{
     drift_withdraw_borrow_context_impl,
     errors::SurfError,
-    helpers::hedge::get_notional_amount_diff,
+    helpers::hedge::get_token_amount_diff,
     instructions::lib::{
         get_borrowed_amount_diff, update_program_accounts,
         update_spot_market_and_sync_borrow_interest_growth, validate_next_hedge_position,
@@ -87,11 +87,11 @@ pub fn handler(ctx: Context<AdjustVaultHedgeBelow>) -> Result<()> {
     )?;
 
     let borrowed_amount_diff_notional =
-        get_notional_amount_diff(&mut ctx.accounts.vault_quote_token_account, true)?;
+        get_token_amount_diff(&mut ctx.accounts.vault_quote_token_account, false)?;
 
     update_program_accounts(
         borrowed_amount_diff as i64,
-        borrowed_amount_diff_notional,
+        borrowed_amount_diff_notional as i64,
         current_tick,
         &mut hedge_position,
         &mut ctx.accounts.vault_state,

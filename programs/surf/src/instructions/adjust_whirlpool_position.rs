@@ -17,7 +17,7 @@ use whirlpools_client::math::{MAX_SQRT_PRICE_X64, MIN_SQRT_PRICE_X64};
 use crate::{
     errors::SurfError,
     helpers::{
-        hedge::get_notional_amount_diff,
+        hedge::get_token_amount_diff,
         whirlpool::{
             sync_vault_whirlpool_position, transfer_whirlpool_fees_and_rewards_to_vault,
             CollectWhirlpoolFeesAndRewardsContext,
@@ -33,37 +33,6 @@ use crate::{
     },
 };
 
-pub fn withdraw_liquidity(ctx: &Context<AdjustWhirlpoolPosition>) -> Result<()> {
-    let vault_whirlpool_position = &ctx.accounts.vault_whirlpool_position;
-
-    let (current_base_token_amount, current_quote_token_amount) = get_whirlpool_tokens_deltas(
-        vault_whirlpool_position.liquidity,
-        ctx.accounts.whirlpool.sqrt_price,
-        vault_whirlpool_position.upper_sqrt_price,
-        vault_whirlpool_position.lower_sqrt_price,
-        false,
-    )?;
-
-    whirlpool_cpi::decrease_liquidity(
-        ctx.accounts.decrease_liquidity_context(),
-        vault_whirlpool_position.liquidity,
-        current_base_token_amount,
-        current_quote_token_amount,
-    )?;
-
-    Ok(())
-}
-
-pub fn get_base_token_diff<'info>(
-    base_token_account: &mut Account<'info, TokenAccount>,
-) -> Result<u64> {
-    let pre_amount = base_token_account.amount;
-    base_token_account.reload()?;
-    let post_amount = base_token_account.amount;
-
-    Ok(pre_amount - post_amount)
-}
-
 pub struct NextAmounts {
     liquidity: u128,
     base_token: u64,
@@ -73,7 +42,6 @@ pub struct NextAmounts {
 pub fn handler(ctx: Context<AdjustWhirlpoolPosition>, next_position_bump: u8) -> Result<()> {
     let whirlpool = &mut ctx.accounts.whirlpool;
     let vault_whirlpool_position = &mut ctx.accounts.vault_whirlpool_position;
-
     let current_sqrt_price = whirlpool.sqrt_price;
     let upper_sqrt_price_boundary = vault_whirlpool_position.inner_upper_sqrt_price;
     let lower_sqrt_price_boundary = vault_whirlpool_position.inner_lower_sqrt_price;
@@ -92,8 +60,10 @@ pub fn handler(ctx: Context<AdjustWhirlpoolPosition>, next_position_bump: u8) ->
         &ctx.accounts.position_tick_array_upper,
         &ctx.accounts.whirlpool_program,
     )?;
+
     drop(vault_whirlpool_position);
     drop(whirlpool);
+
     transfer_whirlpool_fees_and_rewards_to_vault(&ctx)?;
     withdraw_liquidity(&ctx)?;
 
@@ -131,7 +101,6 @@ pub fn handler(ctx: Context<AdjustWhirlpoolPosition>, next_position_bump: u8) ->
             let base_token_diff = estimated_base_token_amount - current_base_token_amount;
             ctx.accounts.vault_quote_token_account.reload()?;
 
-            // 2. swap to estimated amounts
             whirlpool_cpi::swap(
                 ctx.accounts.swap_context(),
                 base_token_diff,
@@ -142,8 +111,7 @@ pub fn handler(ctx: Context<AdjustWhirlpoolPosition>, next_position_bump: u8) ->
             )?;
 
             let quote_token_diff =
-                get_notional_amount_diff(&mut ctx.accounts.vault_quote_token_account, false)?
-                    .unsigned_abs();
+                get_token_amount_diff(&mut ctx.accounts.vault_quote_token_account, false)?;
 
             let new_sqrt_price = if ctx.accounts.swap_whirlpool.key().eq(&whirlpool.key()) {
                 ctx.accounts.whirlpool.reload()?;
@@ -152,7 +120,6 @@ pub fn handler(ctx: Context<AdjustWhirlpoolPosition>, next_position_bump: u8) ->
                 whirlpool.sqrt_price
             };
 
-            // 3. get real amounts
             let real_quote_token_amount = current_quote_token_amount - quote_token_diff;
             let real_liq = get_liquidity_from_quote_token(
                 real_quote_token_amount,
@@ -204,7 +171,8 @@ pub fn handler(ctx: Context<AdjustWhirlpoolPosition>, next_position_bump: u8) ->
                 true,
             )?;
 
-            let base_token_dif = get_base_token_diff(&mut ctx.accounts.vault_base_token_account)?;
+            let base_token_diff =
+                get_token_amount_diff(&mut ctx.accounts.vault_base_token_account, false)?;
 
             let new_sqrt_price = if ctx.accounts.swap_whirlpool.key().eq(&whirlpool.key()) {
                 ctx.accounts.whirlpool.reload()?;
@@ -213,7 +181,7 @@ pub fn handler(ctx: Context<AdjustWhirlpoolPosition>, next_position_bump: u8) ->
                 whirlpool.sqrt_price
             };
 
-            let real_base_token_amount = current_base_token_amount - base_token_dif;
+            let real_base_token_amount = current_base_token_amount - base_token_diff;
             let real_liq = get_liquidity_from_base_token(
                 real_base_token_amount,
                 new_sqrt_price,
@@ -285,6 +253,27 @@ pub fn handler(ctx: Context<AdjustWhirlpoolPosition>, next_position_bump: u8) ->
         .update_whirlpool_adjustment_state(next_adjustment_state);
 
     // TODO: save unused token amounts
+
+    Ok(())
+}
+
+pub fn withdraw_liquidity(ctx: &Context<AdjustWhirlpoolPosition>) -> Result<()> {
+    let vault_whirlpool_position = &ctx.accounts.vault_whirlpool_position;
+
+    let (current_base_token_amount, current_quote_token_amount) = get_whirlpool_tokens_deltas(
+        vault_whirlpool_position.liquidity,
+        ctx.accounts.whirlpool.sqrt_price,
+        vault_whirlpool_position.upper_sqrt_price,
+        vault_whirlpool_position.lower_sqrt_price,
+        false,
+    )?;
+
+    whirlpool_cpi::decrease_liquidity(
+        ctx.accounts.decrease_liquidity_context(),
+        vault_whirlpool_position.liquidity,
+        current_base_token_amount,
+        current_quote_token_amount,
+    )?;
 
     Ok(())
 }

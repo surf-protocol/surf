@@ -14,34 +14,39 @@ use whirlpools::{
     program::Whirlpool as WhirlpoolProgram,
     TickArray, Whirlpool,
 };
-use whirlpools_client::math::{sqrt_price_from_tick_index, MIN_SQRT_PRICE_X64};
+use whirlpools_client::math::sqrt_price_from_tick_index;
 
 use crate::{
     drift_deposit_collateral_context_impl, drift_withdraw_borrow_context_impl,
     errors::SurfError,
     helpers::hedge::{
-        get_hedged_notional_amount, increase_vault_hedge_token_amounts,
-        sync_vault_interest_growths, update_user_interests,
+        get_token_amount_diff, increase_vault_hedge_token_amounts, sync_vault_interest_growths,
+        update_user_interests,
     },
     state::{HedgePosition, UserPosition, VaultState, WhirlpoolPosition},
-    utils::orca::liquidity_math::{get_amount_delta_a_wrapped, get_amount_delta_b_wrapped},
+    utils::{
+        constraints::validate_user_position_sync,
+        orca::{
+            liquidity_math::{get_amount_delta_a_wrapped, get_amount_delta_b_wrapped},
+            swap::{get_default_other_amount_threshold, get_default_sqrt_price_limit},
+        },
+    },
 };
 
 pub fn handler(ctx: Context<IncreaseLiquidityHedge>, borrow_amount: u64) -> Result<()> {
-    let user_position = &ctx.accounts.user_position;
     let whirlpool_position = &ctx.accounts.vault_whirlpool_position;
     let mut hedge_position = ctx.accounts.vault_hedge_position.load_mut()?;
 
-    require!(user_position.liquidity > 0, SurfError::ZeroLiquidity);
-    // Validate if user position is synced with whirlpool position and hedge position
-    require_eq!(user_position.whirlpool_position_id, whirlpool_position.id);
-    require_eq!(user_position.hedge_position_id, hedge_position.id);
-    require_eq!(
-        user_position.borrow_position_index,
-        hedge_position.current_borrow_position_index
+    require!(
+        ctx.accounts.user_position.liquidity > 0,
+        SurfError::ZeroLiquidity
     );
 
-    drop(user_position);
+    validate_user_position_sync(
+        &ctx.accounts.user_position,
+        Some(&hedge_position),
+        Some(&whirlpool_position),
+    )?;
 
     drift_cpi::update_spot_market_cumulative_interest(
         ctx.accounts.update_borrow_spot_market_context(),
@@ -68,22 +73,22 @@ pub fn handler(ctx: Context<IncreaseLiquidityHedge>, borrow_amount: u64) -> Resu
     )?;
 
     let user_position = &ctx.accounts.user_position;
-
     let lower_sqrt_price = whirlpool_position.lower_sqrt_price;
     let middle_sqrt_price = whirlpool_position.middle_sqrt_price;
 
-    // TODO: Should be * 2
+    // whirlpool quote token amount * 2 to always maintain at least 75% LTV
     let required_collateral_amount = get_amount_delta_b_wrapped(
         lower_sqrt_price,
         middle_sqrt_price,
         user_position.liquidity,
         true,
-    )?;
+    )? * 2;
     let current_collateral_amount = user_position.collateral_amount;
 
     let mut collateral_amount = 0_u64;
 
-    // Only deposit collateral if user does not have enough collateral to cover whole whirlpool position
+    // Only deposit collateral if user does not have
+    // enough collateral to cover the whole whirlpool position
     if required_collateral_amount > current_collateral_amount {
         collateral_amount = required_collateral_amount - current_collateral_amount;
 
@@ -143,14 +148,14 @@ pub fn handler(ctx: Context<IncreaseLiquidityHedge>, borrow_amount: u64) -> Resu
     whirlpool_cpi::swap(
         ctx.accounts.swap_context(),
         borrow_amount,
-        0,
-        MIN_SQRT_PRICE_X64,
+        get_default_other_amount_threshold(true),
+        get_default_sqrt_price_limit(true),
         true,
         true,
     )?;
 
     let borrow_amount_notional =
-        get_hedged_notional_amount(&mut ctx.accounts.vault_quote_token_account)?;
+        get_token_amount_diff(&mut ctx.accounts.vault_quote_token_account, true)?;
 
     increase_vault_hedge_token_amounts(
         &mut ctx.accounts.vault_state,

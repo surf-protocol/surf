@@ -70,9 +70,10 @@ pub fn update_user_borrow_interest<'info>(
     let user_interest_unclaimed =
         calculate_user_interest(user_position.borrow_amount, borrow_interest_delta)?;
 
-    user_position.borrow_interest_unclaimed =
-        user_position.borrow_interest_unclaimed + user_interest_unclaimed;
-    user_position.borrow_interest_growth_checkpoint = borrow_position.borrow_interest_growth;
+    user_position.update_borrow_interest(
+        user_interest_unclaimed,
+        borrow_position.borrow_interest_growth,
+    )?;
 
     Ok(())
 }
@@ -86,9 +87,8 @@ pub fn update_user_collateral_interest<'info>(
     let interest_unclaimed =
         calculate_user_interest(user_position.collateral_amount, interest_delta)?;
 
-    user_position.collateral_interest_unclaimed =
-        user_position.collateral_interest_unclaimed + interest_unclaimed;
-    user_position.collateral_interest_growth_checkpoint = vault_state.collateral_interest_growth;
+    user_position
+        .update_collateral_interest(interest_unclaimed, vault_state.collateral_interest_growth)?;
 
     Ok(())
 }
@@ -133,26 +133,23 @@ pub fn update_user_borrow_amounts<'info>(
     let user_borrowed_amount = user_position.borrow_amount;
     let global_borrowed_amount = borrow_position.borrowed_amount;
     let global_borrowed_amount_diff = borrow_position.borrowed_amount_diff;
-
     let new_user_borrowed_amount = calculate_user_amount_diff(
         global_borrowed_amount,
         global_borrowed_amount_diff,
         user_borrowed_amount,
     )?;
 
-    user_position.borrow_amount = new_user_borrowed_amount;
-
     let user_borrowed_amount_notional = user_position.borrow_amount_notional;
     let global_borrowed_amount_notional = borrow_position.borrowed_amount_notional;
     let global_borrowed_amount_notional_diff = borrow_position.borrowed_amount_notional_diff;
-
     let new_user_borrowed_amount_notional = calculate_user_amount_diff(
         global_borrowed_amount_notional,
         global_borrowed_amount_notional_diff,
         user_borrowed_amount_notional,
     )?;
 
-    user_position.borrow_amount_notional = new_user_borrowed_amount_notional;
+    user_position
+        .update_borrow_amounts(new_user_borrowed_amount, new_user_borrowed_amount_notional);
 
     Ok(())
 }
@@ -183,33 +180,6 @@ pub fn calculate_user_amount_diff(
         (user_amount as u128) * (global_diff_abs as u128) / (new_global_amount as u128);
 
     Ok(new_user_amount as u64)
-}
-
-pub fn get_hedged_notional_amount<'info>(
-    vault_quote_token_account: &mut Account<'info, TokenAccount>,
-) -> Result<u64> {
-    let pre_amount = vault_quote_token_account.amount;
-    vault_quote_token_account.reload()?;
-    let post_amount = vault_quote_token_account.amount;
-
-    Ok(post_amount - pre_amount)
-}
-
-pub fn get_notional_amount_diff<'info>(
-    vault_quote_token_account: &mut Account<'info, TokenAccount>,
-    is_positive: bool,
-) -> Result<i64> {
-    let pre_amount = vault_quote_token_account.amount;
-    vault_quote_token_account.reload()?;
-    let post_amount = vault_quote_token_account.amount;
-
-    let diff = (pre_amount as i64) - (post_amount as i64);
-
-    if is_positive {
-        Ok(diff)
-    } else {
-        Ok(-diff)
-    }
 }
 
 /// Get amount difference of token account after CPI call

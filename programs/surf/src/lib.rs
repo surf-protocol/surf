@@ -43,17 +43,27 @@ pub mod surf {
         sync_whirlpool_position::handler(ctx)
     }
 
-    pub fn deposit_liquidity(
-        ctx: Context<DepositLiquidity>,
+    pub fn increase_liquidity(
+        ctx: Context<IncreaseLiquidity>,
         liquidity_input: u128,
         base_token_max: u64,
         quote_token_max: u64,
     ) -> Result<()> {
-        deposit_liquidity::handler(ctx, liquidity_input, base_token_max, quote_token_max)
+        increase_liquidity::handler(ctx, liquidity_input, base_token_max, quote_token_max)
     }
 
-    pub fn hedge_liquidity(ctx: Context<IncreaseLiquidityHedge>, borrow_amount: u64) -> Result<()> {
+    pub fn increase_liquidity_hedge(
+        ctx: Context<IncreaseLiquidityHedge>,
+        borrow_amount: u64,
+    ) -> Result<()> {
         increase_liquidity_hedge::handler(ctx, borrow_amount)
+    }
+
+    pub fn decrease_liquidity_hedge(
+        ctx: Context<DecreaseLiquidityHedge>,
+        borrow_amount: u64,
+    ) -> Result<()> {
+        decrease_liquidity_hedge::handler(ctx, borrow_amount)
     }
 
     /// Synchronizes user whirlpool position fees, rewards and liquidity to match current state

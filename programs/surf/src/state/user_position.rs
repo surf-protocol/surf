@@ -104,6 +104,39 @@ impl UserPosition {
         Ok(())
     }
 
+    pub fn update_borrow_amounts(&mut self, borrow_amount: u64, borrow_amount_notional: u64) -> () {
+        self.borrow_amount = borrow_amount;
+        self.borrow_amount_notional = borrow_amount_notional;
+    }
+
+    pub fn update_borrow_interest(
+        &mut self,
+        interest_unclaimed_diff: u64,
+        interest_growth_checkpoint: u128,
+    ) -> Result<()> {
+        self.borrow_interest_unclaimed = self
+            .borrow_interest_unclaimed
+            .checked_add(interest_unclaimed_diff)
+            .ok_or(SurfError::BorrowInterestOverflow)?;
+        self.borrow_interest_growth_checkpoint = interest_growth_checkpoint;
+
+        Ok(())
+    }
+
+    pub fn update_collateral_interest(
+        &mut self,
+        interest_unclaimed_diff: u64,
+        interest_growth_checkpoint: u128,
+    ) -> Result<()> {
+        self.collateral_interest_unclaimed = self
+            .collateral_interest_unclaimed
+            .checked_add(interest_unclaimed_diff)
+            .ok_or(SurfError::CollateralInterestOverflow)?;
+        self.collateral_interest_growth_checkpoint = interest_growth_checkpoint;
+
+        Ok(())
+    }
+
     pub fn claim_borrow_interest(&mut self) -> () {
         self.borrow_interest_unclaimed = 0;
     }

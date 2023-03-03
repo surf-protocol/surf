@@ -12,7 +12,6 @@ pub fn handler(ctx: Context<SyncUserHedgePosition>) -> Result<()> {
     let vault_state = &ctx.accounts.vault_state;
     let user_position = &mut ctx.accounts.user_position;
 
-    // UPDATE BORROW POSITION
     for hedge_position_ai in ctx.remaining_accounts.iter() {
         let hedge_position_loader = AccountLoader::<HedgePosition>::try_from(hedge_position_ai)?;
         let hedge_position = hedge_position_loader.load()?;
@@ -45,6 +44,7 @@ pub fn handler(ctx: Context<SyncUserHedgePosition>) -> Result<()> {
             {
                 update_user_borrow_amounts(user_position, borrow_position)?;
                 user_position.borrow_position_index = user_position.borrow_position_index + 1;
+                user_position.borrow_interest_growth_checkpoint = 0;
             }
         }
 
@@ -55,7 +55,6 @@ pub fn handler(ctx: Context<SyncUserHedgePosition>) -> Result<()> {
         }
     }
 
-    // UPDATE COLLATERAL POSITION INTEREST
     update_user_collateral_interest(user_position, vault_state)?;
 
     Ok(())

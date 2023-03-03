@@ -1,7 +1,7 @@
 use anchor_lang::prelude::*;
 use anchor_spl::token::{self as token_cpi, Token, TokenAccount, Transfer};
 use whirlpools::{
-    cpi::{self as whirlpool_cpi, accounts::IncreaseLiquidity},
+    cpi::{self as whirlpool_cpi, accounts::IncreaseLiquidity as IncreaseWhirlpoolLiquidity},
     program::Whirlpool as WhirlpoolProgram,
     Position as WhirlpoolPosition, TickArray, Whirlpool,
 };
@@ -13,7 +13,7 @@ use crate::{
 };
 
 pub fn handler(
-    ctx: Context<DepositLiquidity>,
+    ctx: Context<IncreaseLiquidity>,
     liquidity_input: u128,
     base_token_max: u64,
     quote_token_max: u64,
@@ -100,7 +100,7 @@ pub fn handler(
 }
 
 #[derive(Accounts)]
-pub struct DepositLiquidity<'info> {
+pub struct IncreaseLiquidity<'info> {
     pub owner: Signer<'info>,
     #[account(
         mut,
@@ -174,12 +174,12 @@ pub struct DepositLiquidity<'info> {
     pub token_program: Program<'info, Token>,
 }
 
-impl<'info> DepositLiquidity<'info> {
+impl<'info> IncreaseLiquidity<'info> {
     pub fn deposit_liquidity_context(
         &self,
-    ) -> CpiContext<'_, '_, '_, 'info, IncreaseLiquidity<'info>> {
+    ) -> CpiContext<'_, '_, '_, 'info, IncreaseWhirlpoolLiquidity<'info>> {
         let program = &self.whirlpool_program;
-        let accounts = IncreaseLiquidity {
+        let accounts = IncreaseWhirlpoolLiquidity {
             whirlpool: self.whirlpool.to_account_info(),
             token_vault_a: self.whirlpool_base_token_account.to_account_info(),
             token_vault_b: self.whirlpool_quote_token_account.to_account_info(),
