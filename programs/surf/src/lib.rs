@@ -52,6 +52,10 @@ pub mod surf {
         increase_liquidity::handler(ctx, liquidity_input, base_token_max, quote_token_max)
     }
 
+    pub fn decrease_liquidity(ctx: Context<DecreaseLiquidity>, liquidity: u128) -> Result<()> {
+        decrease_liquidity::handler(ctx, liquidity)
+    }
+
     pub fn increase_liquidity_hedge(
         ctx: Context<IncreaseLiquidityHedge>,
         borrow_amount: u64,

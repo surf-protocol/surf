@@ -69,6 +69,8 @@ pub enum SurfError {
 
     #[msg("User position does not have any liquidity")]
     ZeroLiquidity,
+    #[msg("User position liquidity is lower than provided liquidity")]
+    InvalidLiquidity,
     #[msg("User position does not have any collateral")]
     ZeroCollateral,
     #[msg("User position does not have any borrow")]

@@ -1,5 +1,53 @@
 use anchor_lang::prelude::*;
+use anchor_spl::token::Transfer;
 use drift::cpi::accounts::{Deposit, UpdateSpotMarketCumulativeInterest, Withdraw};
+
+// ----- VAULT ------
+
+pub trait TransferTokensFromVaultToUserContext<'info> {
+    fn transfer_base_token_from_vault_to_user(
+        &self,
+    ) -> CpiContext<'_, '_, '_, 'info, Transfer<'info>>;
+
+    fn transfer_quote_token_from_vault_to_user(
+        &self,
+    ) -> CpiContext<'_, '_, '_, 'info, Transfer<'info>>;
+}
+
+#[macro_export]
+macro_rules! transfer_tokens_from_vault_to_user_context_impl {
+    ($struct_name:ident) => {
+        use crate::macros::TransferTokensFromVaultToUserContext;
+
+        impl<'info> TransferTokensFromVaultToUserContext<'info> for $struct_name<'info> {
+            fn transfer_base_token_from_vault_to_user(
+                &self,
+            ) -> CpiContext<'_, '_, '_, 'info, Transfer<'info>> {
+                let program = &self.token_program;
+                let accounts = Transfer {
+                    from: self.vault_base_token_account.to_account_info(),
+                    to: self.owner_base_token_account.to_account_info(),
+                    authority: self.vault_state.to_account_info(),
+                };
+                CpiContext::new(program.to_account_info(), accounts)
+            }
+
+            fn transfer_quote_token_from_vault_to_user(
+                &self,
+            ) -> CpiContext<'_, '_, '_, 'info, Transfer<'info>> {
+                let program = &self.token_program;
+                let accounts = Transfer {
+                    from: self.vault_quote_token_account.to_account_info(),
+                    to: self.owner_quote_token_account.to_account_info(),
+                    authority: self.vault_state.to_account_info(),
+                };
+                CpiContext::new(program.to_account_info(), accounts)
+            }
+        }
+    };
+}
+
+// ----- DRIFT -----
 
 pub trait DriftDepositCollateralContext<'info> {
     fn drift_deposit_collateral_context(&self) -> CpiContext<'_, '_, '_, 'info, Deposit<'info>>;

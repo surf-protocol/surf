@@ -48,13 +48,17 @@ impl UserPosition {
         self.bump = bump;
     }
 
-    pub fn deposit_liquidity(&mut self, liquidity_input: u128) -> Result<()> {
+    pub fn increase_liquidity(&mut self, liquidity_input: u128) -> Result<()> {
         self.liquidity = self
             .liquidity
             .checked_add(liquidity_input)
             .ok_or(SurfError::LiquidityOverflow)?;
 
         Ok(())
+    }
+
+    pub fn decrease_liquidity(&mut self, liquidity: u128) -> () {
+        self.liquidity = self.liquidity - liquidity;
     }
 
     pub fn increase_hedge(
@@ -102,6 +106,11 @@ impl UserPosition {
         self.borrow_interest_unclaimed = 0;
 
         Ok(())
+    }
+
+    pub fn reset_fees_and_rewards(&mut self) -> () {
+        self.fee_unclaimed_base_token = 0;
+        self.fee_unclaimed_quote_token = 0;
     }
 
     pub fn update_borrow_amounts(&mut self, borrow_amount: u64, borrow_amount_notional: u64) -> () {

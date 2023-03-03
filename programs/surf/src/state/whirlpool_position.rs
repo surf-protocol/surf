@@ -67,12 +67,16 @@ impl WhirlpoolPosition {
         self.liquidity_diff = liquidity_diff;
     }
 
-    pub fn deposit_liquidity(&mut self, liquidity_input: u128) -> Result<()> {
+    pub fn increase_liquidity(&mut self, liquidity_input: u128) -> Result<()> {
         self.liquidity = self
             .liquidity
             .checked_add(liquidity_input)
             .ok_or(SurfError::LiquidityOverflow)?;
 
         Ok(())
+    }
+
+    pub fn decrease_liquidity(&mut self, liquidity: u128) -> () {
+        self.liquidity = self.liquidity - liquidity;
     }
 }

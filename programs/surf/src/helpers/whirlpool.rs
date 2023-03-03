@@ -41,9 +41,7 @@ pub fn sync_vault_whirlpool_position<'info>(
 }
 
 pub trait CollectWhirlpoolFeesAndRewardsContext<'info> {
-    fn collect_whirlpool_fees_and_rewards_context(
-        &self,
-    ) -> CpiContext<'_, '_, '_, 'info, CollectFees<'info>>;
+    fn collect_whirlpool_fees_context(&self) -> CpiContext<'_, '_, '_, 'info, CollectFees<'info>>;
 }
 
 pub fn transfer_whirlpool_fees_and_rewards_to_vault<
@@ -52,7 +50,7 @@ pub fn transfer_whirlpool_fees_and_rewards_to_vault<
 >(
     ctx: &Context<T>,
 ) -> Result<()> {
-    whirlpool_cpi::collect_fees(ctx.accounts.collect_whirlpool_fees_and_rewards_context())
+    whirlpool_cpi::collect_fees(ctx.accounts.collect_whirlpool_fees_context())
 
     // TODO: Collect rewards if needed
 }

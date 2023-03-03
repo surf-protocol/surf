@@ -483,9 +483,7 @@ impl<'info> AdjustWhirlpoolPosition<'info> {
 }
 
 impl<'info> CollectWhirlpoolFeesAndRewardsContext<'info> for AdjustWhirlpoolPosition<'info> {
-    fn collect_whirlpool_fees_and_rewards_context(
-        &self,
-    ) -> CpiContext<'_, '_, '_, 'info, CollectFees<'info>> {
+    fn collect_whirlpool_fees_context(&self) -> CpiContext<'_, '_, '_, 'info, CollectFees<'info>> {
         let program = &self.whirlpool_program;
         let accounts = CollectFees {
             whirlpool: self.whirlpool.to_account_info(),

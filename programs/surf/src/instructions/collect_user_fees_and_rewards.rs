@@ -1,47 +1,42 @@
 use anchor_lang::prelude::*;
-use anchor_spl::token::{self, Token, TokenAccount, Transfer};
+use anchor_spl::token::{self as token_cpi, Token, TokenAccount, Transfer};
 use whirlpools::Whirlpool;
 
-use crate::state::{UserPosition, VaultState};
+use crate::{
+    state::{UserPosition, VaultState},
+    transfer_tokens_from_vault_to_user_context_impl,
+};
 
 pub fn handler(ctx: Context<CollectUserFeesAndRewards>) -> Result<()> {
-    let user_position = &ctx.accounts.user_position;
-    let token_program = &ctx.accounts.token_program;
+    let user_position = &mut ctx.accounts.user_position;
+    let base_token_fee = user_position.fee_unclaimed_base_token;
+    let quote_token_fee = user_position.fee_unclaimed_quote_token;
+
+    user_position.reset_fees_and_rewards();
 
     let whirlpool_key = ctx.accounts.whirlpool.key();
-    let vault_state_signer_seeds: &[&[&[u8]]] = &[&[
+    let signer_seeds: &[&[&[u8]]] = &[&[
         VaultState::NAMESPACE.as_ref(),
         whirlpool_key.as_ref(),
         &[ctx.accounts.vault_state.bump],
     ]];
 
-    token::transfer(
-        CpiContext::new(
-            token_program.to_account_info(),
-            Transfer {
-                from: ctx.accounts.vault_base_token_account.to_account_info(),
-                to: ctx.accounts.owner_base_token_account.to_account_info(),
-                authority: ctx.accounts.vault_state.to_account_info(),
-            },
-        )
-        .with_signer(vault_state_signer_seeds),
-        user_position.fee_unclaimed_base_token,
+    token_cpi::transfer(
+        ctx.accounts
+            .transfer_base_token_from_vault_to_user()
+            .with_signer(signer_seeds),
+        base_token_fee,
     )?;
 
-    token::transfer(
-        CpiContext::new(
-            token_program.to_account_info(),
-            Transfer {
-                from: ctx.accounts.vault_quote_token_account.to_account_info(),
-                to: ctx.accounts.owner_quote_token_account.to_account_info(),
-                authority: ctx.accounts.vault_state.to_account_info(),
-            },
-        )
-        .with_signer(vault_state_signer_seeds),
-        user_position.fee_unclaimed_quote_token,
+    token_cpi::transfer(
+        ctx.accounts
+            .transfer_quote_token_from_vault_to_user()
+            .with_signer(signer_seeds),
+        quote_token_fee,
     )?;
 
     // TODO: Transfer rewards
+
     Ok(())
 }
 
@@ -92,3 +87,5 @@ pub struct CollectUserFeesAndRewards<'info> {
 
     pub token_program: Program<'info, Token>,
 }
+
+transfer_tokens_from_vault_to_user_context_impl!(CollectUserFeesAndRewards);

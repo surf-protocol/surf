@@ -90,11 +90,11 @@ pub fn handler(
     // 4. update program accounts
     ctx.accounts
         .user_position
-        .deposit_liquidity(liquidity_input)?;
+        .increase_liquidity(liquidity_input)?;
 
     ctx.accounts
         .vault_whirlpool_position
-        .deposit_liquidity(liquidity_input)?;
+        .increase_liquidity(liquidity_input)?;
 
     Ok(())
 }
