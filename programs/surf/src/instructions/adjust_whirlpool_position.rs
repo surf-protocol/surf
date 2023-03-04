@@ -65,6 +65,7 @@ pub fn handler(ctx: Context<AdjustWhirlpoolPosition>, next_position_bump: u8) ->
     drop(whirlpool);
 
     transfer_whirlpool_fees_and_rewards_to_vault(&ctx)?;
+    // TODO: Close position
     withdraw_liquidity(&ctx)?;
 
     let whirlpool = &ctx.accounts.whirlpool;

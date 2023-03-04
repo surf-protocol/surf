@@ -1,6 +1,7 @@
 pub mod adjust_vault_hedge;
 pub mod adjust_whirlpool_position;
 pub mod claim_user_interest;
+pub mod close_user_position;
 pub mod collect_user_fees_and_rewards;
 pub mod decrease_liquidity;
 pub mod decrease_liquidity_hedge;
@@ -17,6 +18,7 @@ pub mod sync_whirlpool_position;
 pub use adjust_vault_hedge::*;
 pub use adjust_whirlpool_position::*;
 pub use claim_user_interest::*;
+pub use close_user_position::*;
 pub use collect_user_fees_and_rewards::*;
 pub use decrease_liquidity::*;
 pub use decrease_liquidity_hedge::*;
