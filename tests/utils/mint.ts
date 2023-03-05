@@ -6,11 +6,11 @@ import { connection, wallet } from './load-config.js'
 import { buildAndSendTx } from './transaction.js'
 
 export const quoteMintKeyPair = new Keypair()
-export const quoteTokenATA = getAssociatedTokenAddressSync(
+export const quoteTokenUserATA = getAssociatedTokenAddressSync(
 	quoteMintKeyPair.publicKey,
 	wallet.publicKey,
 )
-export const baseTokenATA = getAssociatedTokenAddressSync(NATIVE_MINT, wallet.publicKey)
+export const baseTokenUserATA = getAssociatedTokenAddressSync(NATIVE_MINT, wallet.publicKey)
 
 const getSortedMints = (): [PublicKey, number][] => {
 	const usdcMint = quoteMintKeyPair.publicKey
@@ -31,9 +31,7 @@ const getSortedMints = (): [PublicKey, number][] => {
 const [[baseTokenMint, baseTokenDecimals], [quoteTokenMint, quoteTokenDecimals]] = getSortedMints()
 export { baseTokenMint, baseTokenDecimals, quoteTokenMint, quoteTokenDecimals }
 
-console.log(`Token A mint: ${baseTokenMint.toString()}\nToken B mint: ${quoteTokenMint.toString()}`)
-
-const createUsdcMint = async () => {
+export const initializeQuoteTokenMint = async () => {
 	const ixs = [
 		SystemProgram.createAccount({
 			fromPubkey: wallet.publicKey,
@@ -52,5 +50,3 @@ const createUsdcMint = async () => {
 	]
 	await buildAndSendTx(connection, [wallet, quoteMintKeyPair], ixs)
 }
-
-await createUsdcMint()

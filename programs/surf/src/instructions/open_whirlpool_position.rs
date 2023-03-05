@@ -8,11 +8,8 @@ use whirlpools::{
 
 use crate::{
     errors::SurfError,
-    state::{AdminConfig, VaultState, WhirlpoolPosition},
-    utils::{
-        constraints::is_admin,
-        tick_range::{calculate_whirlpool_and_inner_bounds, validate_bounds},
-    },
+    state::{VaultState, WhirlpoolPosition},
+    utils::tick_range::{calculate_whirlpool_and_inner_bounds, validate_bounds},
 };
 
 pub fn handler(ctx: Context<OpenWhirlpoolPosition>, position_bump: u8) -> Result<()> {
@@ -60,18 +57,8 @@ pub fn handler(ctx: Context<OpenWhirlpoolPosition>, position_bump: u8) -> Result
 
 #[derive(Accounts)]
 pub struct OpenWhirlpoolPosition<'info> {
-    #[account(
-        mut,
-        constraint = is_admin(&admin_config, &admin) @SurfError::InvalidAdmin,
-    )]
-    pub admin: Signer<'info>,
-    #[account(
-        seeds = [
-            AdminConfig::NAMESPACE.as_ref(),
-        ],
-        bump = admin_config.bump,
-    )]
-    pub admin_config: Account<'info, AdminConfig>,
+    #[account(mut)]
+    pub payer: Signer<'info>,
 
     #[account(
         mut,
@@ -86,7 +73,7 @@ pub struct OpenWhirlpoolPosition<'info> {
 
     #[account(
         init,
-        payer = admin,
+        payer = payer,
         space = WhirlpoolPosition::LEN,
         seeds = [
             WhirlpoolPosition::NAMESPACE.as_ref(),
@@ -102,8 +89,8 @@ pub struct OpenWhirlpoolPosition<'info> {
     pub whirlpool: Box<Account<'info, Whirlpool>>,
 
     /// CHECK: Whirlpool program handles checks
+    #[account(mut)]
     pub whirlpool_position: UncheckedAccount<'info>,
-    /// CHECK: Whirlpool program handles checks
     #[account(mut)]
     pub whirlpool_position_mint: Signer<'info>,
     /// CHECK: Whirlpool program handles checks
@@ -123,7 +110,7 @@ impl<'info> OpenWhirlpoolPosition<'info> {
     ) -> CpiContext<'_, '_, '_, 'info, OpenPosition<'info>> {
         let program = &self.whirlpool_program;
         let accounts = OpenPosition {
-            funder: self.admin.to_account_info(),
+            funder: self.payer.to_account_info(),
             owner: self.vault_state.to_account_info(),
             position: self.whirlpool_position.to_account_info(),
             position_mint: self.whirlpool_position_mint.to_account_info(),

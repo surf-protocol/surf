@@ -49,7 +49,7 @@ pub fn handler(
     let vault_state_bump = *ctx.bumps.get("vault_state").unwrap();
     let whirlpool_key = ctx.accounts.whirlpool.key();
 
-    let drift_signer_seeds: &[&[&[u8]]] = &[&[
+    let signer_seeds: &[&[&[u8]]] = &[&[
         VaultState::NAMESPACE.as_ref(),
         whirlpool_key.as_ref(),
         &[vault_state_bump],
@@ -58,14 +58,14 @@ pub fn handler(
     drift_cpi::initialize_user_stats(
         ctx.accounts
             .initialize_drift_stats_context()
-            .with_signer(drift_signer_seeds),
+            .with_signer(signer_seeds),
     )?;
 
     let drift_subaccount_name = [32_u8; 32];
     drift_cpi::initialize_user(
         ctx.accounts
             .initialize_drift_subaccount_context()
-            .with_signer(drift_signer_seeds),
+            .with_signer(signer_seeds),
         0_u16,
         drift_subaccount_name,
     )?;
@@ -128,7 +128,7 @@ pub struct InitializeVaultState<'info> {
         ],
         bump,
     )]
-    pub vault_state: Account<'info, VaultState>,
+    pub vault_state: Box<Account<'info, VaultState>>,
 
     #[account(
         init,
@@ -136,18 +136,19 @@ pub struct InitializeVaultState<'info> {
         associated_token::mint = base_token_mint,
         associated_token::authority = vault_state,
     )]
-    pub vault_base_token_account: Account<'info, TokenAccount>,
+    pub vault_base_token_account: Box<Account<'info, TokenAccount>>,
     #[account(
         init,
         payer = admin,
         associated_token::mint = quote_token_mint,
         associated_token::authority = vault_state,
     )]
-    pub vault_quote_token_account: Account<'info, TokenAccount>,
+    pub vault_quote_token_account: Box<Account<'info, TokenAccount>>,
 
     // ------
     // Drift accounts
     /// CHECK: Drift program validates the account in the CPI
+    #[account(mut)]
     pub drift_state: UncheckedAccount<'info>,
     /// CHECK: Drift program validates the account in the CPI
     #[account(

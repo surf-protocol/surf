@@ -18,9 +18,9 @@ import BN from 'bn.js'
 
 import { buildAndSendTx } from '../transaction.js'
 import {
-	baseTokenATA,
+	baseTokenUserATA,
 	quoteMintKeyPair,
-	quoteTokenATA,
+	quoteTokenUserATA,
 	baseTokenDecimals,
 	baseTokenMint,
 	quoteTokenDecimals,
@@ -48,7 +48,11 @@ export const whirlpoolProgram = WhirlpoolContext.withProvider(
 ).program
 
 export const buildInitTickArrayIx = (startTickIndex: number, whirlpoolKey: PublicKey) => {
-	const tickArrayPda = PDAUtil.getTickArray(ORCA_WHIRLPOOL_PROGRAM_ID, whirlpoolKey, startTickIndex)
+	const tickArrayPda = PDAUtil.getTickArray(
+		ORCA_WHIRLPOOL_PROGRAM_ID,
+		whirlpoolKey,
+		startTickIndex,
+	)
 	const ix = WhirlpoolIx.initTickArrayIx(whirlpoolProgram, {
 		tickArrayPda,
 		startTick: startTickIndex,
@@ -104,7 +108,7 @@ export const initTickArrays = async (whirlpoolKey: PublicKey) => {
 }
 
 // Init whirlpool
-export const initWhirlpool = async () => {
+export const mockWhirlpool = async () => {
 	const configKeyPairs = {
 		feeAuthorityKeypair: Keypair.generate(),
 		collectProtocolFeesAuthorityKeypair: Keypair.generate(),
@@ -115,7 +119,8 @@ export const initWhirlpool = async () => {
 		whirlpoolsConfigKeypair,
 		feeAuthority: configKeyPairs.feeAuthorityKeypair.publicKey,
 		collectProtocolFeesAuthority: configKeyPairs.collectProtocolFeesAuthorityKeypair.publicKey,
-		rewardEmissionsSuperAuthority: configKeyPairs.rewardEmissionsSuperAuthorityKeypair.publicKey,
+		rewardEmissionsSuperAuthority:
+			configKeyPairs.rewardEmissionsSuperAuthorityKeypair.publicKey,
 		defaultProtocolFeeRate: DEFAULT_FEE_RATE,
 		funder: wallet.publicKey,
 	})
@@ -183,8 +188,8 @@ export const initWhirlpool = async () => {
 	return {
 		tickArrays,
 		whirlpoolData,
-		oracleKey: oracleKey.publicKey,
-		whirlpoolKey: whirlpoolPDA.publicKey,
+		oracleAddress: oracleKey.publicKey,
+		whirlpoolAddress: whirlpoolPDA.publicKey,
 	}
 }
 
@@ -201,7 +206,10 @@ export const fundPosition = async (
 		wallet.publicKey,
 		false,
 	)
-	const positionPDA = PDAUtil.getPosition(ORCA_WHIRLPOOL_PROGRAM_ID, positionMintKeyPair.publicKey)
+	const positionPDA = PDAUtil.getPosition(
+		ORCA_WHIRLPOOL_PROGRAM_ID,
+		positionMintKeyPair.publicKey,
+	)
 
 	const ticksInArray = DEFAULT_TICK_SPACING * TICK_ARRAY_SIZE
 	const upperTickIndex = DEFAULT_START_TICK + 3 * ticksInArray
@@ -234,8 +242,8 @@ export const fundPosition = async (
 		positionTokenAccount: positionATA,
 		whirlpool: whirlpoolKey,
 		positionAuthority: wallet.publicKey,
-		tokenOwnerAccountA: baseTokenATA,
-		tokenOwnerAccountB: quoteTokenATA,
+		tokenOwnerAccountA: baseTokenUserATA,
+		tokenOwnerAccountB: quoteTokenUserATA,
 		tickArrayLower: tickArrays[-3].publicKey,
 		tickArrayUpper: tickArrays[3].publicKey,
 	}).instructions

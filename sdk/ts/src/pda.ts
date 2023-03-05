@@ -10,9 +10,9 @@ export const getAdminConfigProgramAddress = () => {
 	return PublicKey.findProgramAddressSync([Buffer.from('admin_config', 'utf-8')], SURF_PROGRAM_ID)
 }
 
-export const getVaultProgramAddress = (whirlpoolAddress: PublicKey) => {
+export const getVaultStateProgramAddress = (whirlpoolAddress: PublicKey) => {
 	return PublicKey.findProgramAddressSync(
-		[Buffer.from('vault', 'utf-8'), whirlpoolAddress.toBuffer()],
+		[Buffer.from('vault_state', 'utf-8'), whirlpoolAddress.toBuffer()],
 		SURF_PROGRAM_ID,
 	)
 }
@@ -38,8 +38,8 @@ export const getVaultDriftAccountsAddresses = (
 	}
 }
 
-export const getVaultWhirlpoolPositionAccountsAddresses = (
-	vaultPositionAddress: PublicKey,
+export const getWhirlpoolPositionAccountsAddresses = (
+	vaultStateAddress: PublicKey,
 	whirlpoolProgramId = ORCA_WHIRLPOOL_PROGRAM_ID,
 ) => {
 	const whirlpoolPositionMintKeyPair = new Keypair()
@@ -47,25 +47,42 @@ export const getVaultWhirlpoolPositionAccountsAddresses = (
 		whirlpoolProgramId,
 		whirlpoolPositionMintKeyPair.publicKey,
 	)
-	const whirlpoolPositionVaultTokenAccount = getAssociatedTokenAddressSync(
+	const whirlpoolPositionVaultTokenAccountAddress = getAssociatedTokenAddressSync(
 		whirlpoolPositionMintKeyPair.publicKey,
-		vaultPositionAddress,
+		vaultStateAddress,
 		true,
 	)
 	return {
 		whirlpoolPositionMintKeyPair,
-		whirlpoolPositionVaultTokenAccount,
-		whirlpoolPositionPDA: publicKey,
+		whirlpoolPositionVaultTokenAccountAddress,
+		whirlpoolPositionAddress: publicKey,
 		whirlpoolPositionBump: bump,
 	}
 }
 
-export const getVaultPositionAddress = (vaultAddress: PublicKey, vaultPositionId: BN | number) => {
+export const getVaultWhirlpoolPositionAddress = (
+	vaultStateAddress: PublicKey,
+	vaultWhirlpoolPositionId: BN | number,
+) => {
 	return PublicKey.findProgramAddressSync(
 		[
-			Buffer.from('vault_position', 'utf-8'),
-			vaultAddress.toBuffer(),
-			new BN(vaultPositionId).toArrayLike(Buffer, 'le', 8),
+			Buffer.from('whirlpool_position', 'utf-8'),
+			vaultStateAddress.toBuffer(),
+			new BN(vaultWhirlpoolPositionId).toArrayLike(Buffer, 'le', 8),
+		],
+		SURF_PROGRAM_ID,
+	)
+}
+
+export const getHedgePositionAddress = (
+	vaultStateAddress: PublicKey,
+	hedgePositionId: BN | number,
+) => {
+	return PublicKey.findProgramAddressSync(
+		[
+			Buffer.from('hedge_position', 'utf-8'),
+			vaultStateAddress.toBuffer(),
+			new BN(hedgePositionId).toArrayLike(Buffer, 'le', 8),
 		],
 		SURF_PROGRAM_ID,
 	)

@@ -388,6 +388,7 @@ pub struct AdjustWhirlpoolPosition<'info> {
         address = swap_whirlpool.token_vault_b,
     )]
     pub swap_whirlpool_quote_token_vault: Box<Account<'info, TokenAccount>>,
+    /// CHECK: Whirlpool CPI
     pub swap_whirlpool_oracle: UncheckedAccount<'info>,
 
     #[account(mut)]

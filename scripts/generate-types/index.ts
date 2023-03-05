@@ -16,7 +16,7 @@ const IDL_FILE_NAME = 'surf'
 
 // scripts/dist/generate-types
 const __dirname = dirname(fileURLToPath(import.meta.url))
-const SRC_RELATIVE_PATH = '../../../'
+const SRC_RELATIVE_PATH = '../../'
 const SDK_TYPES_PATH = path.join(__dirname, SRC_RELATIVE_PATH, './sdk/ts/src/idl')
 const SRC_IDL_JSON_PATH = path.join(
 	__dirname,
@@ -80,7 +80,11 @@ IDLParsed.instructions?.forEach(({ name, accounts, args }) => {
 
 	const accountsType = composeAccountsType(accounts, capitalizedName)
 	const { type: argsType, argsNames } = composeArgs(args, capitalizedName, generatedInstructions)
-	const paramsType = composeParamsType({ hasAccounts, hasArgs, ixNameCapitalized: capitalizedName })
+	const paramsType = composeParamsType({
+		hasAccounts,
+		hasArgs,
+		ixNameCapitalized: capitalizedName,
+	})
 	const ixFunction = composeInstructionFunction({
 		ixName: name,
 		ixNameCapitalized: capitalizedName,

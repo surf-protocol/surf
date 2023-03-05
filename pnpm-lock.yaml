@@ -8,6 +8,7 @@ specifiers:
   '@solana/spl-token': ^0.3.7
   '@solana/web3.js': ^1.73.0
   '@types/bn.js': ^5.1.0
+  '@types/lodash.camelcase': ^4.3.7
   '@types/node': ^18.11.18
   '@typescript-eslint/eslint-plugin': ^5.48.1
   '@typescript-eslint/parser': ^5.48.1
@@ -18,6 +19,7 @@ specifiers:
   eslint: ^8.31.0
   eslint-config-prettier: ^8.6.0
   husky: ^8.0.0
+  lodash.camelcase: ^4.3.0
   npm-run-all: ^4.1.5
   prettier: ^2.6.2
   solana-tx-utils: ^0.1.1
@@ -40,6 +42,7 @@ dependencies:
 
 devDependencies:
   '@types/bn.js': 5.1.1
+  '@types/lodash.camelcase': 4.3.7
   '@types/node': 18.11.18
   '@typescript-eslint/eslint-plugin': 5.48.1_3jon24igvnqaqexgwtxk6nkpse
   '@typescript-eslint/parser': 5.48.1_iukboom6ndih5an6iafl45j2fe
@@ -47,6 +50,7 @@ devDependencies:
   eslint: 8.31.0
   eslint-config-prettier: 8.6.0_eslint@8.31.0
   husky: 8.0.3
+  lodash.camelcase: 4.3.0
   npm-run-all: 4.1.5
   prettier: 2.8.2
   ts-node: 10.9.1_awa2wsr5thmg3i7jqycphctjfq
@@ -756,6 +760,16 @@ packages:
 
   /@types/json-schema/7.0.11:
     resolution: {integrity: sha512-wOuvG1SN4Us4rez+tylwwwCV1psiNVOkJeM3AUWUNWg/jDQY2+HE/444y5gc+jBmRqASOm2Oeh5c1axHobwRKQ==}
+    dev: true
+
+  /@types/lodash.camelcase/4.3.7:
+    resolution: {integrity: sha512-Nfi6jpo9vuEOSIJP+mpbTezKyEt75DQlbwjiDvs/JctWkbnHDoyQo5lWqdvgNiJmVUjcmkfvlrvSEgJYvurOKg==}
+    dependencies:
+      '@types/lodash': 4.14.191
+    dev: true
+
+  /@types/lodash/4.14.191:
+    resolution: {integrity: sha512-BdZ5BCCvho3EIXw6wUCXHe7rS53AIDPLE+JzwgT+OsJk53oBfbSmZZ7CX4VaRoN78N+TJpFi9QPlfIVNmJYWxQ==}
     dev: true
 
   /@types/node/12.20.55:
@@ -2122,6 +2136,10 @@ packages:
     engines: {node: '>=10'}
     dependencies:
       p-locate: 5.0.0
+    dev: true
+
+  /lodash.camelcase/4.3.0:
+    resolution: {integrity: sha512-TwuEnCnxbc3rAvhf/LbG7tJUDzhqXyFnv3dtzLOPgCG/hODL7WFnsbwktkD7yUV0RrreP/l1PALq/YSg6VvjlA==}
     dev: true
 
   /lodash.merge/4.6.2:

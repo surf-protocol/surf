@@ -32,20 +32,17 @@ pub fn handler(ctx: Context<SyncWhirlpoolPosition>) -> Result<()> {
 
 #[derive(Accounts)]
 pub struct SyncWhirlpoolPosition<'info> {
-    // TODO: can be removed (?)
-    pub payer: Signer<'info>,
-
-    pub vault_state: Account<'info, VaultState>,
+    pub vault_state: Box<Account<'info, VaultState>>,
     #[account(
         mut,
         address = vault_state.base_token_account,
     )]
-    pub vault_base_token_account: Account<'info, TokenAccount>,
+    pub vault_base_token_account: Box<Account<'info, TokenAccount>>,
     #[account(
         mut,
         address = vault_state.quote_token_account,
     )]
-    pub vault_quote_token_account: Account<'info, TokenAccount>,
+    pub vault_quote_token_account: Box<Account<'info, TokenAccount>>,
 
     #[account(
         mut,
@@ -56,22 +53,22 @@ pub struct SyncWhirlpoolPosition<'info> {
         ],
         bump = vault_whirlpool_position.bump,
     )]
-    pub vault_whirlpool_position: Account<'info, VaultWhirlpoolPosition>,
+    pub vault_whirlpool_position: Box<Account<'info, VaultWhirlpoolPosition>>,
 
     #[account(
         address = vault_state.whirlpool,
     )]
-    pub whirlpool: Account<'info, Whirlpool>,
+    pub whirlpool: Box<Account<'info, Whirlpool>>,
     #[account(
         mut,
         address = whirlpool.token_vault_a,
     )]
-    pub whirlpool_base_token_vault: Account<'info, TokenAccount>,
+    pub whirlpool_base_token_vault: Box<Account<'info, TokenAccount>>,
     #[account(
         mut,
         address = whirlpool.token_vault_b,
     )]
-    pub whirlpool_quote_token_vault: Account<'info, TokenAccount>,
+    pub whirlpool_quote_token_vault: Box<Account<'info, TokenAccount>>,
 
     #[account(
         mut,
@@ -79,7 +76,7 @@ pub struct SyncWhirlpoolPosition<'info> {
     )]
     pub whirlpool_position: Account<'info, WhirlpoolPosition>,
 
-    pub whirlpool_position_token_account: Account<'info, TokenAccount>,
+    pub whirlpool_position_token_account: Box<Account<'info, TokenAccount>>,
 
     #[account(mut)]
     pub tick_array_lower: AccountLoader<'info, TickArray>,

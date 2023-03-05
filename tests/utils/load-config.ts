@@ -9,7 +9,7 @@ import { Pyth } from '../../target/types/pyth.js'
 dotenv.config()
 
 export const pythProgram = workspace.Pyth as Program<Pyth>
-export const program = workspace.Surf as Program<SurfIDL>
+export const surfProgram = workspace.Surf as Program<SurfIDL>
 export const provider = AnchorProvider.env()
 setProvider(provider)
 

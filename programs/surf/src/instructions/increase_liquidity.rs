@@ -107,13 +107,13 @@ pub struct IncreaseLiquidity<'info> {
         token::mint = vault_state.base_token_mint,
         token::authority = owner,
     )]
-    pub owner_base_token_account: Account<'info, TokenAccount>,
+    pub owner_base_token_account: Box<Account<'info, TokenAccount>>,
     #[account(
         mut,
         token::mint = vault_state.quote_token_mint,
         token::authority = owner,
     )]
-    pub owner_quote_token_account: Account<'info, TokenAccount>,
+    pub owner_quote_token_account: Box<Account<'info, TokenAccount>>,
 
     #[account(
         mut,
@@ -125,19 +125,19 @@ pub struct IncreaseLiquidity<'info> {
         bump = user_position.bump,
         constraint = Some(user_position.whirlpool_position_id) == vault_state.current_whirlpool_position_id,
     )]
-    pub user_position: Account<'info, UserPosition>,
+    pub user_position: Box<Account<'info, UserPosition>>,
 
     pub vault_state: Account<'info, VaultState>,
     #[account(
         mut,
         address = vault_state.base_token_account,
     )]
-    pub vault_base_token_account: Account<'info, TokenAccount>,
+    pub vault_base_token_account: Box<Account<'info, TokenAccount>>,
     #[account(
         mut,
         address = vault_state.quote_token_account,
     )]
-    pub vault_quote_token_account: Account<'info, TokenAccount>,
+    pub vault_quote_token_account: Box<Account<'info, TokenAccount>>,
 
     #[account(
         mut,

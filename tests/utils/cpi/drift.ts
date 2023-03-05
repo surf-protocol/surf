@@ -13,8 +13,8 @@ import { Program } from '@coral-xyz/anchor'
 import BN from 'bn.js'
 
 import { mockOracle } from './pyth.js'
-import { connection, provider, wallet } from '../load-config.js'
-import { baseTokenATA, baseTokenMint, quoteMintKeyPair } from '../mint.js'
+import { connection, provider } from '../load-config.js'
+import { baseTokenUserATA, baseTokenMint, quoteMintKeyPair } from '../mint.js'
 import { DriftIdl } from './drift-idl.js'
 import { DRIFT_PROGRAM_ID_MAINNET } from '../../../sdk/ts/src/constants.js'
 
@@ -72,7 +72,9 @@ const initializeBaseSpotMarket = async () => {
 	const optimalUtilization = SPOT_MARKET_RATE_PRECISION.div(new BN(2)).toNumber()
 	const optimalRate = SPOT_MARKET_RATE_PRECISION.div(new BN(10)).mul(new BN(2)).toNumber()
 	const maxRate = SPOT_MARKET_RATE_PRECISION.mul(new BN(5)).toNumber()
-	const initialAssetWeight = SPOT_MARKET_WEIGHT_PRECISION.div(new BN(10)).mul(new BN(8)).toNumber()
+	const initialAssetWeight = SPOT_MARKET_WEIGHT_PRECISION.div(new BN(10))
+		.mul(new BN(8))
+		.toNumber()
 	const maintenanceAssetWeight = SPOT_MARKET_WEIGHT_PRECISION.div(new BN(10))
 		.mul(new BN(9))
 		.toNumber()
@@ -150,7 +152,7 @@ export const mockDrift = async () => {
 
 	await adminClient.initializeUserAccountAndDepositCollateral(
 		new BN(1000 * LAMPORTS_PER_SOL),
-		baseTokenATA,
+		baseTokenUserATA,
 		1,
 		0,
 	)

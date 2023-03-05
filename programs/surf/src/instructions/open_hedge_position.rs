@@ -28,6 +28,7 @@ pub struct OpenHedgePosition<'info> {
     #[account(mut)]
     pub payer: Signer<'info>,
 
+    #[account(mut)]
     pub vault_state: Account<'info, VaultState>,
 
     #[account(

@@ -1,4 +1,5 @@
 import { IdlNumberType, Generated, IdlPredefinedTypes, IdlType, IdlField } from './types.js'
+import camelcase from 'lodash.camelcase'
 
 export const buildSeparator = (name: string) => `// ----------\n// ${name}\n// ----------\n`
 
@@ -63,7 +64,7 @@ export const getType = (target: Generated, fieldType?: IdlType): string => {
 export const buildTypescriptType = (name: string, fields: IdlField[], generated: Generated) => {
 	const typeDef = `export type ${name} = `
 	const propsArr = fields.map(
-		(fieldType) => `${fieldType.name}: ${getType(generated, fieldType.type)}`,
+		(fieldType) => `${camelcase(fieldType.name)}: ${getType(generated, fieldType.type)}`,
 	)
 	const propsStr = propsArr.join('\n\t')
 	return `${typeDef}{\n\t${propsStr}\n}\n`
