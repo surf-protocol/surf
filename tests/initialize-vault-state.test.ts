@@ -1,17 +1,23 @@
 import { beforeAll, describe, expect, it } from 'vitest'
 import { ASSOCIATED_TOKEN_PROGRAM_ID, TOKEN_PROGRAM_ID } from '@solana/spl-token'
 import { UserAccount, UserStatsAccount } from '@drift-labs/sdk'
-import { ComputeBudgetProgram, PublicKey, SystemProgram, SYSVAR_RENT_PUBKEY } from '@solana/web3.js'
+import {
+	ComputeBudgetProgram,
+	Keypair,
+	PublicKey,
+	SystemProgram,
+	SYSVAR_RENT_PUBKEY,
+} from '@solana/web3.js'
 
 import { wallet, connection, surfProgram } from './utils/load-config'
 import { mockWhirlpool } from './utils/cpi/whirlpool'
 import { buildAndSendTx } from './utils/transaction'
 import { baseTokenMint, quoteTokenMint } from './utils/mint'
-import { mockDrift, driftStateKey, driftProgram } from './utils/cpi/drift'
+import { mockDrift, driftStateAddress, driftProgram } from './utils/cpi/drift'
 import {
-	getVaultStateProgramAddress,
-	getVaultTokenAccountsAddresses,
-	getVaultDriftAccountsAddresses,
+	getVaultStateAddress,
+	getVaultStateTokenAccountsAddresses,
+	getVaultStateDriftAccountsAddresses,
 } from '../sdk/ts/src/pda'
 import { buildInitializeVaultStateIx } from '../sdk/ts/src/idl/instructions'
 import { parseVaultStateAccount } from '../sdk/ts/src/idl/state-accounts'
@@ -30,10 +36,11 @@ describe('initialize_vault_state', () => {
 	it('successfully initializes vault', async () => {
 		const { whirlpoolAddress } = await mockWhirlpool()
 
-		const [vaultStateAddress, vaultStateBump] = getVaultStateProgramAddress(whirlpoolAddress)
+		const [vaultStateAddress, vaultStateBump] = getVaultStateAddress(whirlpoolAddress)
 		const [vaultBaseTokenAccountAddress, vaultQuoteTokenAccountAddress] =
-			getVaultTokenAccountsAddresses(vaultStateAddress, baseTokenMint, quoteTokenMint)
-		const { driftStats, driftSubaccount } = getVaultDriftAccountsAddresses(vaultStateAddress)
+			getVaultStateTokenAccountsAddresses(vaultStateAddress, baseTokenMint, quoteTokenMint)
+		const { driftStatsAddress: driftStats, driftSubaccountAddress: driftSubaccount } =
+			getVaultStateDriftAccountsAddresses(vaultStateAddress)
 
 		const fullTickRange = 800 // 8%
 		const vaultTickRange = 400 // 4%
@@ -57,7 +64,7 @@ describe('initialize_vault_state', () => {
 
 				driftStats,
 				driftSubaccount,
-				driftState: driftStateKey,
+				driftState: driftStateAddress,
 
 				driftProgram: DRIFT_PROGRAM_ID_MAINNET,
 				tokenProgram: TOKEN_PROGRAM_ID,
@@ -76,7 +83,8 @@ describe('initialize_vault_state', () => {
 		const vaultStateAi = await connection.getAccountInfo(vaultStateAddress)
 		const vaultState = parseVaultStateAccount(surfProgram, vaultStateAi.data)
 
-		expect(vaultState.bump).toBe(vaultStateBump)
+		expect(vaultState.bump.length).toBe(1)
+		expect(vaultState.bump[0]).toBe(vaultStateBump)
 		expect(vaultState.whirlpool.equals(whirlpoolAddress)).toBe(true)
 
 		expect(vaultState.baseTokenMint.equals(baseTokenMint)).toBe(true)
@@ -117,5 +125,65 @@ describe('initialize_vault_state', () => {
 
 		expect(driftStatsData.authority.equals(vaultStateAddress)).toBe(true)
 		expect(driftSubaccountData.authority.equals(driftStatsData.authority)).toBe(true)
+	})
+
+	it('fails with invalid admin', async () => {
+		const { whirlpoolAddress } = await mockWhirlpool()
+
+		const fakeAdmin = new Keypair()
+		await buildAndSendTx(
+			connection,
+			[wallet],
+			[
+				SystemProgram.transfer({
+					fromPubkey: wallet.publicKey,
+					toPubkey: fakeAdmin.publicKey,
+					lamports: 1 * 10 ** 9,
+				}),
+			],
+			true,
+		)
+
+		const [vaultStateAddress] = getVaultStateAddress(whirlpoolAddress)
+		const [vaultBaseTokenAccountAddress, vaultQuoteTokenAccountAddress] =
+			getVaultStateTokenAccountsAddresses(vaultStateAddress, baseTokenMint, quoteTokenMint)
+		const { driftStatsAddress: driftStats, driftSubaccountAddress: driftSubaccount } =
+			getVaultStateDriftAccountsAddresses(vaultStateAddress)
+
+		const ix = await buildInitializeVaultStateIx(surfProgram, {
+			args: {
+				fullTickRange: 800,
+				vaultTickRange: 400,
+				hedgeTickRange: 20,
+			},
+			accounts: {
+				admin: fakeAdmin.publicKey,
+				adminConfig: adminConfigAddress,
+				whirlpool: whirlpoolAddress,
+				vaultState: vaultStateAddress,
+				baseTokenMint,
+				quoteTokenMint,
+				vaultBaseTokenAccount: vaultBaseTokenAccountAddress,
+				vaultQuoteTokenAccount: vaultQuoteTokenAccountAddress,
+
+				driftStats,
+				driftSubaccount,
+				driftState: driftStateAddress,
+
+				driftProgram: DRIFT_PROGRAM_ID_MAINNET,
+				tokenProgram: TOKEN_PROGRAM_ID,
+				associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
+				systemProgram: SystemProgram.programId,
+				rent: SYSVAR_RENT_PUBKEY,
+			},
+		})
+
+		const res = await buildAndSendTx(
+			connection,
+			[fakeAdmin],
+			[ComputeBudgetProgram.setComputeUnitLimit({ units: 1_400_000 }), ix],
+		)
+
+		expect(res.status).toBe('ERROR')
 	})
 })

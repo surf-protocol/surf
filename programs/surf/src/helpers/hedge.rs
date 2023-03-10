@@ -13,6 +13,10 @@ pub fn sync_vault_collateral_interest_growth<'info>(
     drift_subaccount: &User,
     collateral_spot_market: &SpotMarket,
 ) -> Result<()> {
+    if vault_state.collateral_amount == 0 {
+        return Ok(());
+    }
+
     let global_collateral_interest = get_global_interest(
         vault_state.collateral_amount,
         drift_subaccount,
@@ -32,6 +36,11 @@ pub fn sync_vault_borrow_interest_growth(
     borrow_spot_market: &SpotMarket,
 ) -> Result<()> {
     let current_borrow_position = hedge_position.get_current_position();
+
+    if current_borrow_position.borrowed_amount == 0 {
+        return Ok(());
+    }
+
     let global_borrow_interest = get_global_interest(
         current_borrow_position.borrowed_amount,
         drift_subaccount,

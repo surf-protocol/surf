@@ -7,6 +7,7 @@ use whirlpools::{
 };
 
 use crate::{
+    errors::SurfError,
     helpers::whirlpool::{sync_vault_whirlpool_position, update_user_fees_and_rewards},
     state::{UserPosition, VaultState, WhirlpoolPosition as VaultWhirlpoolPosition},
     utils::orca::liquidity_math::get_whirlpool_tokens_deltas,
@@ -24,6 +25,15 @@ pub fn handler(
     let tick_array_lower = &ctx.accounts.tick_array_lower;
     let tick_array_upper = &ctx.accounts.tick_array_upper;
     let whirlpool_program = &ctx.accounts.whirlpool_program;
+    let user_position = &mut ctx.accounts.user_position;
+    let vault_state = &ctx.accounts.vault_state;
+
+    if user_position.liquidity == 0 {
+        user_position.whirlpool_position_id = vault_state.current_whirlpool_position_id.unwrap();
+    } else if Some(user_position.whirlpool_position_id) != vault_state.current_whirlpool_position_id
+    {
+        return Err(SurfError::UserPositionNotSynced.into());
+    }
 
     sync_vault_whirlpool_position(
         &mut ctx.accounts.vault_whirlpool_position,
@@ -34,10 +44,7 @@ pub fn handler(
         whirlpool_program,
     )?;
 
-    update_user_fees_and_rewards(
-        &mut ctx.accounts.user_position,
-        &ctx.accounts.vault_whirlpool_position,
-    );
+    update_user_fees_and_rewards(user_position, &ctx.accounts.vault_whirlpool_position);
 
     // 2. transfer from owner to vault
     let vault_whirlpool_position = &ctx.accounts.vault_whirlpool_position;
@@ -81,7 +88,9 @@ pub fn handler(
 
     // 3. transfer from vault to whirlpool
     whirlpool_cpi::increase_liquidity(
-        ctx.accounts.deposit_liquidity_context(),
+        ctx.accounts
+            .deposit_liquidity_context()
+            .with_signer(&[&ctx.accounts.vault_state.get_signer_seeds()]),
         liquidity_input,
         base_token_max,
         quote_token_max,
@@ -123,10 +132,10 @@ pub struct IncreaseLiquidity<'info> {
             owner.key().as_ref(),
         ],
         bump = user_position.bump,
-        constraint = Some(user_position.whirlpool_position_id) == vault_state.current_whirlpool_position_id,
     )]
     pub user_position: Box<Account<'info, UserPosition>>,
 
+    #[account(mut)]
     pub vault_state: Account<'info, VaultState>,
     #[account(
         mut,
@@ -142,7 +151,7 @@ pub struct IncreaseLiquidity<'info> {
     #[account(
         mut,
         constraint = Some(vault_whirlpool_position.id) == vault_state.current_whirlpool_position_id,
-        constraint = vault_whirlpool_position.key().eq(&vault_state.key()),
+        constraint = vault_whirlpool_position.vault_state.eq(&vault_state.key()),
     )]
     pub vault_whirlpool_position: Account<'info, VaultWhirlpoolPosition>,
     #[account(
@@ -153,14 +162,17 @@ pub struct IncreaseLiquidity<'info> {
     pub whirlpool_position_token_account: Box<Account<'info, TokenAccount>>,
 
     #[account(
+        mut,
         address = vault_state.whirlpool,
     )]
     pub whirlpool: Box<Account<'info, Whirlpool>>,
     #[account(
+        mut,
         address = whirlpool.token_vault_a,
     )]
     pub whirlpool_base_token_account: Box<Account<'info, TokenAccount>>,
     #[account(
+        mut,
         address = whirlpool.token_vault_b,
     )]
     pub whirlpool_quote_token_account: Box<Account<'info, TokenAccount>>,

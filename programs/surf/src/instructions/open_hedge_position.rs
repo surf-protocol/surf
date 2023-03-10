@@ -26,14 +26,14 @@ pub fn handler(ctx: Context<OpenHedgePosition>) -> Result<()> {
 #[derive(Accounts)]
 pub struct OpenHedgePosition<'info> {
     #[account(mut)]
-    pub payer: Signer<'info>,
+    pub owner: Signer<'info>,
 
     #[account(mut)]
     pub vault_state: Account<'info, VaultState>,
 
     #[account(
         init,
-        payer = payer,
+        payer = owner,
         space = HedgePosition::LEN,
         seeds = [
             HedgePosition::NAMESPACE.as_ref(),

@@ -63,6 +63,10 @@ trap "kill -- -$$" SIGINT
 
 anchor build -- --features test
 
+pnpm idl-helpers:build
+
+echo $'\n'
+
 rm -rf test-logs
 mkdir test-logs
 

@@ -115,7 +115,7 @@ export const buildOpenWhirlpoolPositionIx = async (
 // ----------
 
 export type OpenHedgePositionIxAccounts = {
-	payer: PublicKey
+	owner: PublicKey
 	vaultState: PublicKey
 	vaultHedgePosition: PublicKey
 	systemProgram: PublicKey
@@ -162,6 +162,50 @@ export const buildSyncWhirlpoolPositionIx = async (
 	{ accounts }: SyncWhirlpoolPositionIxParams,
 ) => {
 	const ix = await program.methods.syncWhirlpoolPosition().accountsStrict(accounts).instruction()
+	return ix
+}
+
+// ----------
+// openUserPosition
+// ----------
+
+export type OpenUserPositionIxAccounts = {
+	owner: PublicKey
+	userPosition: PublicKey
+	vaultState: PublicKey
+	systemProgram: PublicKey
+}
+
+export type OpenUserPositionIxParams = {
+	accounts: OpenUserPositionIxAccounts
+}
+
+export const buildOpenUserPositionIx = async (
+	program: Program<SurfIDL>,
+	{ accounts }: OpenUserPositionIxParams,
+) => {
+	const ix = await program.methods.openUserPosition().accountsStrict(accounts).instruction()
+	return ix
+}
+
+// ----------
+// closeUserPosition
+// ----------
+
+export type CloseUserPositionIxAccounts = {
+	owner: PublicKey
+	userPosition: PublicKey
+}
+
+export type CloseUserPositionIxParams = {
+	accounts: CloseUserPositionIxAccounts
+}
+
+export const buildCloseUserPositionIx = async (
+	program: Program<SurfIDL>,
+	{ accounts }: CloseUserPositionIxParams,
+) => {
+	const ix = await program.methods.closeUserPosition().accountsStrict(accounts).instruction()
 	return ix
 }
 
@@ -347,7 +391,7 @@ export type DecreaseLiquidityHedgeIxAccounts = {
 }
 
 export type DecreaseLiquidityHedgeIxArgs = {
-	borrowAmount: BN
+	factor: number
 }
 
 export type DecreaseLiquidityHedgeIxParams = {
@@ -360,7 +404,7 @@ export const buildDecreaseLiquidityHedgeIx = async (
 	{ accounts, args }: DecreaseLiquidityHedgeIxParams,
 ) => {
 	const ix = await program.methods
-		.decreaseLiquidityHedge(args.borrowAmount)
+		.decreaseLiquidityHedge(args.factor)
 		.accountsStrict(accounts)
 		.instruction()
 	return ix

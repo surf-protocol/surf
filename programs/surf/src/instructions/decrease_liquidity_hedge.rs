@@ -30,8 +30,17 @@ use crate::{
     },
 };
 
-pub fn handler(ctx: Context<DecreaseLiquidityHedge>, borrow_amount: u64) -> Result<()> {
-    let hedge_position = ctx.accounts.hedge_position.load()?;
+fn calculate_fraction(factor: u16, amount: u64) -> u64 {
+    ((amount as u128) * (factor as u128) / 10000_u128) as u64
+}
+
+pub fn handler(ctx: Context<DecreaseLiquidityHedge>, factor: u16) -> Result<()> {
+    require!(
+        factor > 0_u16 && factor <= 10000_u16,
+        SurfError::InvalidFactor,
+    );
+
+    let mut hedge_position = ctx.accounts.hedge_position.load_mut()?;
 
     require!(
         ctx.accounts.user_position.collateral_amount > 0,
@@ -40,10 +49,6 @@ pub fn handler(ctx: Context<DecreaseLiquidityHedge>, borrow_amount: u64) -> Resu
     require!(
         ctx.accounts.user_position.borrow_amount > 0,
         SurfError::ZeroBorrow,
-    );
-    require!(
-        ctx.accounts.user_position.borrow_amount >= borrow_amount,
-        SurfError::InvalidBorrowAmount,
     );
 
     validate_user_position_sync(&ctx.accounts.user_position, Some(&hedge_position), None)?;
@@ -55,9 +60,6 @@ pub fn handler(ctx: Context<DecreaseLiquidityHedge>, borrow_amount: u64) -> Resu
         ctx.accounts.update_collateral_spot_market_context(),
     )?;
 
-    drop(hedge_position);
-
-    let mut hedge_position = ctx.accounts.hedge_position.load_mut()?;
     let drift_subaccount = ctx.accounts.drift_subaccount.load()?;
     let collateral_spot_market = ctx.accounts.drift_collateral_spot_market.load()?;
     let borrow_spot_market = ctx.accounts.drift_borrow_spot_market.load()?;
@@ -69,28 +71,70 @@ pub fn handler(ctx: Context<DecreaseLiquidityHedge>, borrow_amount: u64) -> Resu
         &collateral_spot_market,
         &borrow_spot_market,
     )?;
+
+    drop(drift_subaccount);
+    drop(collateral_spot_market);
+    drop(borrow_spot_market);
+
     update_user_interests(
         &mut ctx.accounts.user_position,
         &ctx.accounts.vault_state,
         &hedge_position.get_current_position(),
     )?;
 
+    // SWAP TOKENS
+    let vault_state = &ctx.accounts.vault_state;
+    let user_position = &ctx.accounts.user_position;
+
+    let decrease_borrow_amount_notional =
+        calculate_fraction(factor, user_position.borrow_amount_notional);
+    let decrease_borrow_amount = calculate_fraction(factor, user_position.borrow_amount);
+
+    if decrease_borrow_amount == 0 || decrease_borrow_amount_notional == 0 {
+        return Err(SurfError::InvalidFactor.into());
+    }
+
     whirlpool_cpi::swap(
-        ctx.accounts.swap_context(),
-        borrow_amount,
-        get_default_other_amount_threshold(false),
+        ctx.accounts
+            .swap_context()
+            .with_signer(&[&vault_state.get_signer_seeds()]),
+        decrease_borrow_amount_notional,
+        get_default_other_amount_threshold(true),
         get_default_sqrt_price_limit(false),
-        false,
+        true,
         false,
     )?;
 
-    let user_position = &ctx.accounts.user_position;
-    let notional_diff = get_token_amount_diff(&mut ctx.accounts.vault_quote_token_account, false)?;
+    let borrow_amount_diff =
+        get_token_amount_diff(&mut ctx.accounts.vault_base_token_account, true)?;
 
-    require!(
-        notional_diff <= user_position.borrow_amount_notional,
-        SurfError::InvalidBorrowAmount
-    );
+    if borrow_amount_diff > decrease_borrow_amount {
+        token_cpi::transfer(
+            CpiContext::new(
+                ctx.accounts.token_program.to_account_info(),
+                Transfer {
+                    from: ctx.accounts.vault_base_token_account.to_account_info(),
+                    to: ctx.accounts.owner_base_token_account.to_account_info(),
+                    authority: ctx.accounts.vault_state.to_account_info(),
+                },
+            )
+            .with_signer(&[&vault_state.get_signer_seeds()]),
+            borrow_amount_diff - decrease_borrow_amount,
+        )?;
+    } else if borrow_amount_diff < decrease_borrow_amount {
+        token_cpi::transfer(
+            CpiContext::new(
+                ctx.accounts.token_program.to_account_info(),
+                Transfer {
+                    from: ctx.accounts.owner_base_token_account.to_account_info(),
+                    to: ctx.accounts.vault_base_token_account.to_account_info(),
+                    authority: ctx.accounts.owner.to_account_info(),
+                },
+            )
+            .with_signer(&[&vault_state.get_signer_seeds()]),
+            decrease_borrow_amount - borrow_amount_diff,
+        )?;
+    }
 
     token_cpi::transfer(
         CpiContext::new(
@@ -104,26 +148,34 @@ pub fn handler(ctx: Context<DecreaseLiquidityHedge>, borrow_amount: u64) -> Resu
         user_position.borrow_interest_unclaimed,
     )?;
 
-    let user_borrow_claimable =
-        user_position.borrow_amount + user_position.borrow_interest_unclaimed;
-    let user_collateral_claimable =
-        user_position.collateral_amount + user_position.collateral_interest_unclaimed;
+    // TRANSFER BORROW
+    let user_borrow_claimable = decrease_borrow_amount + user_position.borrow_interest_unclaimed;
 
     drift_cpi::deposit(
-        ctx.accounts.drift_deposit_borrow_context(),
+        ctx.accounts
+            .drift_deposit_borrow_context()
+            .with_signer(&[&ctx.accounts.vault_state.get_signer_seeds()]),
         1_u16,
         user_borrow_claimable,
         true,
     )?;
 
-    drift_cpi::withdraw(
-        ctx.accounts.drift_withdraw_collateral_context(),
-        0_u16,
-        user_collateral_claimable,
-        true,
-    )?;
+    // TRANSFER COLLATERAL
+    let mut collateral_amount: u64 = 0;
 
-    let collateral_amount = if user_position.borrow_amount == borrow_amount {
+    if user_position.borrow_amount == decrease_borrow_amount {
+        let user_collateral_claimable =
+            user_position.collateral_amount + user_position.collateral_interest_unclaimed;
+
+        drift_cpi::withdraw(
+            ctx.accounts
+                .drift_withdraw_collateral_context()
+                .with_signer(&[&ctx.accounts.vault_state.get_signer_seeds()]),
+            0_u16,
+            user_collateral_claimable,
+            true,
+        )?;
+
         token_cpi::transfer(
             CpiContext::new(
                 ctx.accounts.token_program.to_account_info(),
@@ -132,27 +184,36 @@ pub fn handler(ctx: Context<DecreaseLiquidityHedge>, borrow_amount: u64) -> Resu
                     to: ctx.accounts.owner_quote_token_account.to_account_info(),
                     authority: ctx.accounts.vault_state.to_account_info(),
                 },
-            ),
-            user_position.collateral_amount,
+            )
+            .with_signer(&[&ctx.accounts.vault_state.get_signer_seeds()]),
+            user_collateral_claimable,
         )?;
 
-        user_position.collateral_amount
-    } else {
-        // TODO: Calculate claimable collateral proportional to borrow
-        0
-    };
+        collateral_amount = user_position.collateral_amount;
+    } else if user_position.collateral_interest_unclaimed > 0 {
+        drift_cpi::withdraw(
+            ctx.accounts
+                .drift_withdraw_collateral_context()
+                .with_signer(&[&ctx.accounts.vault_state.get_signer_seeds()]),
+            0_u16,
+            user_position.collateral_interest_unclaimed,
+            true,
+        )?;
+    }
 
     decrease_vault_hedge_token_amounts(
         &mut ctx.accounts.vault_state,
         &mut hedge_position,
         collateral_amount,
-        borrow_amount,
-        notional_diff,
+        decrease_borrow_amount,
+        decrease_borrow_amount_notional,
     )?;
 
-    ctx.accounts
-        .user_position
-        .decrease_hedge(collateral_amount, borrow_amount, notional_diff)?;
+    ctx.accounts.user_position.decrease_hedge(
+        collateral_amount,
+        decrease_borrow_amount,
+        decrease_borrow_amount_notional,
+    )?;
 
     Ok(())
 }
@@ -173,6 +234,7 @@ pub struct DecreaseLiquidityHedge<'info> {
     )]
     pub owner_quote_token_account: Box<Account<'info, TokenAccount>>,
 
+    #[account(mut)]
     pub vault_state: Box<Account<'info, VaultState>>,
 
     #[account(
@@ -232,6 +294,7 @@ pub struct DecreaseLiquidityHedge<'info> {
         seeds::program = drift_program.key(),
     )]
     pub drift_borrow_vault: Box<Account<'info, TokenAccount>>,
+    #[account(mut)]
     pub drift_borrow_spot_market: AccountLoader<'info, SpotMarket>,
     #[account(
         mut,
@@ -243,6 +306,7 @@ pub struct DecreaseLiquidityHedge<'info> {
         seeds::program = drift_program.key(),
     )]
     pub drift_collateral_vault: Box<Account<'info, TokenAccount>>,
+    #[account(mut)]
     pub drift_collateral_spot_market: AccountLoader<'info, SpotMarket>,
 
     /// CHECK: Drift CPI

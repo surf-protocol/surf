@@ -6,18 +6,18 @@ import BN from 'bn.js'
 
 import { DRIFT_PROGRAM_ID_MAINNET, SURF_PROGRAM_ID } from './constants.js'
 
-export const getAdminConfigProgramAddress = () => {
+export const getAdminConfigAddress = () => {
 	return PublicKey.findProgramAddressSync([Buffer.from('admin_config', 'utf-8')], SURF_PROGRAM_ID)
 }
 
-export const getVaultStateProgramAddress = (whirlpoolAddress: PublicKey) => {
+export const getVaultStateAddress = (whirlpoolAddress: PublicKey) => {
 	return PublicKey.findProgramAddressSync(
 		[Buffer.from('vault_state', 'utf-8'), whirlpoolAddress.toBuffer()],
 		SURF_PROGRAM_ID,
 	)
 }
 
-export const getVaultTokenAccountsAddresses = (
+export const getVaultStateTokenAccountsAddresses = (
 	vaultAddress: PublicKey,
 	baseTokenMint: PublicKey,
 	quoteTokenMint: PublicKey,
@@ -26,15 +26,15 @@ export const getVaultTokenAccountsAddresses = (
 	getAssociatedTokenAddressSync(quoteTokenMint, vaultAddress, true),
 ]
 
-export const getVaultDriftAccountsAddresses = (
-	vaultAddress: PublicKey,
+export const getVaultStateDriftAccountsAddresses = (
+	vaultStateAddress: PublicKey,
 	driftProgramId = DRIFT_PROGRAM_ID_MAINNET,
 ) => {
-	const driftStats = getUserStatsAccountPublicKey(driftProgramId, vaultAddress)
-	const driftSubaccount = getUserAccountPublicKeySync(driftProgramId, vaultAddress, 0)
+	const driftStatsAddress = getUserStatsAccountPublicKey(driftProgramId, vaultStateAddress)
+	const driftSubaccountAddress = getUserAccountPublicKeySync(driftProgramId, vaultStateAddress, 0)
 	return {
-		driftStats,
-		driftSubaccount,
+		driftStatsAddress,
+		driftSubaccountAddress,
 	}
 }
 
@@ -88,9 +88,13 @@ export const getHedgePositionAddress = (
 	)
 }
 
-export const getUserPositionAddress = (vaultAddress: PublicKey, ownerAddress: PublicKey) => {
+export const getUserPositionAddress = (vaultStateAddress: PublicKey, ownerAddress: PublicKey) => {
 	return PublicKey.findProgramAddressSync(
-		[Buffer.from('user_position', 'utf-8'), vaultAddress.toBuffer(), ownerAddress.toBuffer()],
+		[
+			Buffer.from('user_position', 'utf-8'),
+			vaultStateAddress.toBuffer(),
+			ownerAddress.toBuffer(),
+		],
 		SURF_PROGRAM_ID,
 	)
 }

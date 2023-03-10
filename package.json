@@ -25,6 +25,8 @@
         "solana-tx-utils": "^0.1.1"
     },
     "devDependencies": {
+        "@coral-xyz/borsh": "^0.27.0",
+        "@solana/buffer-layout": "^4.0.1",
         "@types/bn.js": "^5.1.0",
         "@types/lodash.camelcase": "^4.3.7",
         "@types/node": "^18.11.18",

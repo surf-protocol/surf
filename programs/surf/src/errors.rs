@@ -67,6 +67,8 @@ pub enum SurfError {
     #[msg("Can not update user position without providing previous vault positions")]
     MissingPreviousVaultPositions,
 
+    #[msg("Invalid factor, factor has be higher than 0 and lower or equal to 10000")]
+    InvalidFactor,
     #[msg("User position does not have any liquidity")]
     ZeroLiquidity,
     #[msg("User position liquidity is lower than provided liquidity")]

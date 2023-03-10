@@ -64,7 +64,7 @@ pub fn handler(ctx: Context<AdjustWhirlpoolPosition>, next_position_bump: u8) ->
     drop(vault_whirlpool_position);
     drop(whirlpool);
 
-    transfer_whirlpool_fees_and_rewards_to_vault(&ctx)?;
+    transfer_whirlpool_fees_and_rewards_to_vault(&ctx, &ctx.accounts.vault_state)?;
     // TODO: Close position
     withdraw_liquidity(&ctx)?;
 
@@ -290,7 +290,7 @@ pub struct AdjustWhirlpoolPosition<'info> {
             VaultState::NAMESPACE.as_ref(),
             whirlpool.key().as_ref(),
         ],
-        bump = vault_state.bump,
+        bump = vault_state.bump[0],
         constraint = vault_state.current_whirlpool_position_id != None,
     )]
     pub vault_state: Box<Account<'info, VaultState>>,

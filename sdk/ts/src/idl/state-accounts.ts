@@ -74,7 +74,7 @@ export const parseUserPositionAccount = (program: Program<SurfIDL>, data: Buffer
 }
 
 export type VaultStateAccount = {
-	bump: number
+	bump: number[]
 	whirlpool: PublicKey
 	baseTokenMint: PublicKey
 	quoteTokenMint: PublicKey

@@ -23,7 +23,6 @@ whirlpools_client = { git = "https://github.com/orca-so/whirlpools", tag = "0.8.
 drift = { git = "https://github.com/drift-labs/protocol-v2", tag = "v2.11.0", package = "drift", features = ["cpi"] }
 anchor-spl = "0.25.0"
 borsh = "0.10.0"
-uint = { version = "0.9.5", default-features = false }
 
 [dev-dependencies]
 proptest = "1.0"

@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest'
 
 import { buildInitializeAdminConfigIx } from '../sdk/ts/src/idl/instructions'
 import { parseAdminConfigAccount } from '../sdk/ts/src/idl/state-accounts'
-import { getAdminConfigProgramAddress } from '../sdk/ts/src/pda'
+import { getAdminConfigAddress } from '../sdk/ts/src/pda'
 import { wallet, surfProgram, connection } from './utils/load-config'
 import { buildAndSendTx } from './utils/transaction'
 
@@ -28,7 +28,7 @@ describe('initialize_admin_config', () => {
 	})
 
 	it('creates admin config', async () => {
-		const [adminConfigPDA] = getAdminConfigProgramAddress()
+		const [adminConfigPDA] = getAdminConfigAddress()
 		const ix = await buildInitializeAdminConfigIx(surfProgram, {
 			accounts: {
 				adminConfig: adminConfigPDA,
@@ -46,7 +46,7 @@ describe('initialize_admin_config', () => {
 	})
 
 	it('fails to create if admin config is already created', async () => {
-		const [adminConfigPDA] = getAdminConfigProgramAddress()
+		const [adminConfigPDA] = getAdminConfigAddress()
 		const ix = await buildInitializeAdminConfigIx(surfProgram, {
 			accounts: {
 				adminConfig: adminConfigPDA,

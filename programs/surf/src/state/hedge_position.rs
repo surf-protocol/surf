@@ -5,7 +5,8 @@ use anchor_lang::prelude::*;
 use crate::errors::SurfError;
 
 #[zero_copy]
-#[derive(Default)]
+#[repr(packed)]
+#[derive(Default, Debug)]
 pub struct BorrowPosition {
     pub borrowed_amount: u64,      // 8
     pub borrowed_amount_diff: i64, // 8
@@ -18,6 +19,7 @@ pub struct BorrowPosition {
 }
 
 #[account(zero_copy)]
+#[repr(packed)]
 pub struct HedgePosition {
     pub bump: u8, // 1
 

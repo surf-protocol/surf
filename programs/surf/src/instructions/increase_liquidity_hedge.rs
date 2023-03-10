@@ -72,6 +72,10 @@ pub fn handler(ctx: Context<IncreaseLiquidityHedge>, borrow_amount: u64) -> Resu
         &hedge_position.get_current_position(),
     )?;
 
+    drop(drift_subaccount);
+    drop(drift_collateral_spot_market);
+    drop(drift_base_token_spot_market);
+
     let user_position = &ctx.accounts.user_position;
     let lower_sqrt_price = whirlpool_position.lower_sqrt_price;
     let middle_sqrt_price = whirlpool_position.middle_sqrt_price;
@@ -105,7 +109,9 @@ pub fn handler(ctx: Context<IncreaseLiquidityHedge>, borrow_amount: u64) -> Resu
         )?;
 
         drift_cpi::deposit(
-            ctx.accounts.drift_deposit_collateral_context(),
+            ctx.accounts
+                .drift_deposit_collateral_context()
+                .with_signer(&[&ctx.accounts.vault_state.get_signer_seeds()]),
             0_u16,
             collateral_amount,
             false,
@@ -139,14 +145,18 @@ pub fn handler(ctx: Context<IncreaseLiquidityHedge>, borrow_amount: u64) -> Resu
     }
 
     drift_cpi::withdraw(
-        ctx.accounts.drift_withdraw_borrow_context(),
+        ctx.accounts
+            .drift_withdraw_borrow_context()
+            .with_signer(&[&ctx.accounts.vault_state.get_signer_seeds()]),
         1_u16,
         borrow_amount,
         false,
     )?;
 
     whirlpool_cpi::swap(
-        ctx.accounts.swap_context(),
+        ctx.accounts
+            .swap_context()
+            .with_signer(&[&ctx.accounts.vault_state.get_signer_seeds()]),
         borrow_amount,
         get_default_other_amount_threshold(true),
         get_default_sqrt_price_limit(true),
@@ -170,6 +180,8 @@ pub fn handler(ctx: Context<IncreaseLiquidityHedge>, borrow_amount: u64) -> Resu
         borrow_amount,
         borrow_amount_notional,
     )?;
+
+    drop(hedge_position);
 
     Ok(())
 }
@@ -263,6 +275,7 @@ pub struct IncreaseLiquidityHedge<'info> {
         seeds::program = drift_program.key(),
     )]
     pub drift_borrow_vault: Box<Account<'info, TokenAccount>>,
+    #[account(mut)]
     pub drift_borrow_spot_market: AccountLoader<'info, SpotMarket>,
     #[account(
         mut,
@@ -274,6 +287,7 @@ pub struct IncreaseLiquidityHedge<'info> {
         seeds::program = drift_program.key(),
     )]
     pub drift_collateral_vault: Box<Account<'info, TokenAccount>>,
+    #[account(mut)]
     pub drift_collateral_spot_market: AccountLoader<'info, SpotMarket>,
 
     // -------------

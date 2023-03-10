@@ -11,7 +11,7 @@ use whirlpools_client::math::{checked_mul_shift_right, U256Muldiv};
 
 use crate::{
     errors::SurfError,
-    state::{UserPosition, WhirlpoolPosition as VaultWhirlpoolPosition},
+    state::{UserPosition, VaultState, WhirlpoolPosition as VaultWhirlpoolPosition},
 };
 
 pub fn sync_vault_whirlpool_position<'info>(
@@ -22,17 +22,19 @@ pub fn sync_vault_whirlpool_position<'info>(
     tick_array_upper: &AccountLoader<'info, TickArray>,
     whirlpool_program: &Program<'info, WhirlpoolProgram>,
 ) -> Result<()> {
-    whirlpool_cpi::update_fees_and_rewards(CpiContext::new(
-        whirlpool_program.to_account_info(),
-        UpdateFeesAndRewards {
-            whirlpool: whirlpool.to_account_info(),
-            position: whirlpool_position.to_account_info(),
-            tick_array_lower: tick_array_lower.to_account_info(),
-            tick_array_upper: tick_array_upper.to_account_info(),
-        },
-    ))?;
+    if vault_whirlpool_position.liquidity > 0 {
+        whirlpool_cpi::update_fees_and_rewards(CpiContext::new(
+            whirlpool_program.to_account_info(),
+            UpdateFeesAndRewards {
+                whirlpool: whirlpool.to_account_info(),
+                position: whirlpool_position.to_account_info(),
+                tick_array_lower: tick_array_lower.to_account_info(),
+                tick_array_upper: tick_array_upper.to_account_info(),
+            },
+        ))?;
 
-    whirlpool.reload()?;
+        whirlpool.reload()?;
+    }
 
     vault_whirlpool_position.base_token_fee_growth = whirlpool.fee_growth_global_a;
     vault_whirlpool_position.quote_token_fee_growth = whirlpool.fee_growth_global_b;
@@ -49,8 +51,13 @@ pub fn transfer_whirlpool_fees_and_rewards_to_vault<
     T: CollectWhirlpoolFeesAndRewardsContext<'info>,
 >(
     ctx: &Context<T>,
+    vault_state: &Account<'info, VaultState>,
 ) -> Result<()> {
-    whirlpool_cpi::collect_fees(ctx.accounts.collect_whirlpool_fees_context())
+    whirlpool_cpi::collect_fees(
+        ctx.accounts
+            .collect_whirlpool_fees_context()
+            .with_signer(&[&vault_state.get_signer_seeds()]),
+    )
 
     // TODO: Collect rewards if needed
 }

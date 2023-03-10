@@ -14,24 +14,17 @@ pub fn handler(ctx: Context<CollectUserFeesAndRewards>) -> Result<()> {
 
     user_position.reset_fees_and_rewards();
 
-    let whirlpool_key = ctx.accounts.whirlpool.key();
-    let signer_seeds: &[&[&[u8]]] = &[&[
-        VaultState::NAMESPACE.as_ref(),
-        whirlpool_key.as_ref(),
-        &[ctx.accounts.vault_state.bump],
-    ]];
-
     token_cpi::transfer(
         ctx.accounts
             .transfer_base_token_from_vault_to_user()
-            .with_signer(signer_seeds),
+            .with_signer(&[&ctx.accounts.vault_state.get_signer_seeds()]),
         base_token_fee,
     )?;
 
     token_cpi::transfer(
         ctx.accounts
             .transfer_quote_token_from_vault_to_user()
-            .with_signer(signer_seeds),
+            .with_signer(&[&ctx.accounts.vault_state.get_signer_seeds()]),
         quote_token_fee,
     )?;
 

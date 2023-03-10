@@ -66,7 +66,7 @@ pub struct OpenWhirlpoolPosition<'info> {
             VaultState::NAMESPACE.as_ref(),
             whirlpool.key().as_ref(),
         ],
-        bump = vault_state.bump,
+        bump = vault_state.bump[0],
         constraint = vault_state.current_whirlpool_position_id == None @SurfError::VaultPositionAlreadyOpen,
     )]
     pub vault_state: Account<'info, VaultState>,

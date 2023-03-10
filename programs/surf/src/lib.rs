@@ -43,6 +43,14 @@ pub mod surf {
         sync_whirlpool_position::handler(ctx)
     }
 
+    pub fn open_user_position(ctx: Context<OpenUserPosition>) -> Result<()> {
+        open_user_position::handler(ctx)
+    }
+
+    pub fn close_user_position(ctx: Context<CloseUserPosition>) -> Result<()> {
+        close_user_position::handler(ctx)
+    }
+
     pub fn increase_liquidity(
         ctx: Context<IncreaseLiquidity>,
         liquidity_input: u128,
@@ -65,9 +73,9 @@ pub mod surf {
 
     pub fn decrease_liquidity_hedge(
         ctx: Context<DecreaseLiquidityHedge>,
-        borrow_amount: u64,
+        factor: u16,
     ) -> Result<()> {
-        decrease_liquidity_hedge::handler(ctx, borrow_amount)
+        decrease_liquidity_hedge::handler(ctx, factor)
     }
 
     /// Synchronizes user whirlpool position fees, rewards and liquidity to match current state

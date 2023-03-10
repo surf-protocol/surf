@@ -18,7 +18,7 @@ impl Default for WhirlpoolAdjustmentState {
 #[account]
 #[derive(Default)]
 pub struct VaultState {
-    pub bump: u8, // 1
+    pub bump: [u8; 1], // 1
 
     pub whirlpool: Pubkey, // 32
 
@@ -57,6 +57,14 @@ impl VaultState {
     pub const LEN: usize = 8 + 336;
     pub const NAMESPACE: &'static [u8; 11] = b"vault_state";
 
+    pub fn get_signer_seeds(&self) -> [&[u8]; 3] {
+        [
+            Self::NAMESPACE.as_ref(),
+            self.whirlpool.as_ref(),
+            self.bump.as_ref(),
+        ]
+    }
+
     pub fn initialize(
         &mut self,
         bump: u8,
@@ -73,7 +81,7 @@ impl VaultState {
         vault_tick_range: u32,
         hedge_tick_range: u32,
     ) -> () {
-        self.bump = bump;
+        self.bump = [bump];
 
         self.whirlpool = whirlpool;
 

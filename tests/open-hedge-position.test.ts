@@ -33,7 +33,7 @@ describe('open_hedge_position', () => {
 
 		const ix = await buildOpenHedgePositionIx(surfProgram, {
 			accounts: {
-				payer: wallet.publicKey,
+				owner: wallet.publicKey,
 				vaultState: vaultStateAddress,
 				vaultHedgePosition: hedgePositionAddress,
 				systemProgram: SystemProgram.programId,
@@ -54,7 +54,7 @@ describe('open_hedge_position', () => {
 
 		const ix = await buildOpenHedgePositionIx(surfProgram, {
 			accounts: {
-				payer: wallet.publicKey,
+				owner: wallet.publicKey,
 				vaultState: vaultStateAddress,
 				vaultHedgePosition: hedgePositionAddress,
 				systemProgram: SystemProgram.programId,
@@ -93,7 +93,7 @@ describe('open_hedge_position', () => {
 		const vaultStateAddress = await mockVaultEnv(adminConfigAddress)
 
 		await mockHedgePosition({ vaultStateAddress, id: 0 })
-		const res = await mockHedgePosition({ vaultStateAddress, id: 1 })
+		const { res } = await mockHedgePosition({ vaultStateAddress, id: 1 })
 
 		expect(res.status).toBe('SUCCESS')
 

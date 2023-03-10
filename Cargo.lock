@@ -2100,7 +2100,6 @@ dependencies = [
  "borsh 0.10.0",
  "drift",
  "proptest",
- "uint",
  "whirlpool",
  "whirlpools",
 ]

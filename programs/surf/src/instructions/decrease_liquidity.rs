@@ -28,7 +28,7 @@ pub fn handler(ctx: Context<DecreaseLiquidity>, liquidity: u128) -> Result<()> {
         SurfError::ZeroLiquidity
     );
     require!(
-        ctx.accounts.user_position.liquidity > liquidity,
+        ctx.accounts.user_position.liquidity >= liquidity,
         SurfError::InvalidLiquidity,
     );
     sync_vault_whirlpool_position(
@@ -39,7 +39,7 @@ pub fn handler(ctx: Context<DecreaseLiquidity>, liquidity: u128) -> Result<()> {
         &ctx.accounts.tick_array_upper,
         &ctx.accounts.whirlpool_program,
     )?;
-    transfer_whirlpool_fees_and_rewards_to_vault(&ctx)?;
+    transfer_whirlpool_fees_and_rewards_to_vault(&ctx, &ctx.accounts.vault_state)?;
 
     let user_position = &mut ctx.accounts.user_position;
     let vault_whirlpool_position = &ctx.accounts.vault_whirlpool_position;
@@ -61,29 +61,24 @@ pub fn handler(ctx: Context<DecreaseLiquidity>, liquidity: u128) -> Result<()> {
     )?;
 
     whirlpool_cpi::decrease_liquidity(
-        ctx.accounts.decrease_liquidity_context(),
+        ctx.accounts
+            .decrease_liquidity_context()
+            .with_signer(&[&ctx.accounts.vault_state.get_signer_seeds()]),
         user_position.liquidity,
         base_token_amount,
         quote_token_amount,
     )?;
 
-    let whirlpool_key = ctx.accounts.whirlpool.key();
-    let signer_seeds: &[&[&[u8]]] = &[&[
-        VaultState::NAMESPACE.as_ref(),
-        whirlpool_key.as_ref(),
-        &[ctx.accounts.vault_state.bump],
-    ]];
-
     token_cpi::transfer(
         ctx.accounts
             .transfer_base_token_from_vault_to_user()
-            .with_signer(signer_seeds),
+            .with_signer(&[&ctx.accounts.vault_state.get_signer_seeds()]),
         base_token_amount + user_position.fee_unclaimed_base_token,
     )?;
     token_cpi::transfer(
         ctx.accounts
             .transfer_quote_token_from_vault_to_user()
-            .with_signer(signer_seeds),
+            .with_signer(&[&ctx.accounts.vault_state.get_signer_seeds()]),
         quote_token_amount + user_position.fee_unclaimed_quote_token,
     )?;
 

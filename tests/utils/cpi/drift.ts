@@ -12,16 +12,16 @@ import { Keypair, LAMPORTS_PER_SOL, PublicKey } from '@solana/web3.js'
 import { Program } from '@coral-xyz/anchor'
 import BN from 'bn.js'
 
-import { mockOracle } from './pyth.js'
-import { connection, provider } from '../load-config.js'
-import { baseTokenUserATA, baseTokenMint, quoteMintKeyPair } from '../mint.js'
-import { DriftIdl } from './drift-idl.js'
-import { DRIFT_PROGRAM_ID_MAINNET } from '../../../sdk/ts/src/constants.js'
+import { mockOracle } from './pyth'
+import { connection, provider } from '../load-config'
+import { baseTokenUserATA, baseTokenMint, quoteMintKeyPair } from '../mint'
+import { DriftIdl } from './drift-idl'
+import { DRIFT_PROGRAM_ID_MAINNET } from '../../../sdk/ts/src/constants'
 
 const quoteMint = quoteMintKeyPair.publicKey
 
 const baseTokenOracleMint = new Keypair()
-export const driftOracle = baseTokenOracleMint.publicKey
+export const driftOracleAddress = baseTokenOracleMint.publicKey
 
 const adminClient = new TestClient({
 	connection,
@@ -37,8 +37,8 @@ const adminClient = new TestClient({
 	},
 })
 export const driftProgram = adminClient.program as unknown as Program<DriftIdl>
-export const driftStateKey = await adminClient.getStatePublicKey()
-export const driftSignerKey = adminClient.getSignerPublicKey()
+export const driftStateAddress = await adminClient.getStatePublicKey()
+export const driftSignerAddress = adminClient.getSignerPublicKey()
 
 const initializeQuoteSpotMarket = async () => {
 	const optimalUtilization = SPOT_MARKET_RATE_PRECISION.div(new BN(2)).toNumber()
@@ -137,8 +137,8 @@ export const mockDrift = async () => {
 	await adminClient.updatePerpMarketStepSizeAndTickSize(0, new BN(1), new BN(1))
 
 	const [
-		[driftQuoteSpotMarketPDA, driftQuoteSpotMarketVaultPDA],
-		[driftBaseSpotMarketPDA, driftBaseSpotMarketVaultPDA],
+		[driftQuoteSpotMarketAddress, driftQuoteSpotMarketVaultAddress],
+		[driftBaseSpotMarketAddress, driftBaseSpotMarketVaultAddress],
 	] = await Promise.all(
 		[0, 1].map(async (mi) => {
 			const driftSpotMarketPDA = await getSpotMarketPublicKey(DRIFT_PROGRAM_ID_MAINNET, mi)
@@ -158,10 +158,10 @@ export const mockDrift = async () => {
 	)
 
 	return {
-		driftBaseSpotMarketPDA,
-		driftBaseSpotMarketVaultPDA,
-		driftQuoteSpotMarketPDA,
-		driftQuoteSpotMarketVaultPDA,
+		driftBaseSpotMarketAddress,
+		driftBaseSpotMarketVaultAddress,
+		driftQuoteSpotMarketAddress,
+		driftQuoteSpotMarketVaultAddress,
 		driftProgram: adminClient.program as unknown as Program<DriftIdl>,
 	}
 }

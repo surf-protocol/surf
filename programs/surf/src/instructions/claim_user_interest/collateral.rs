@@ -49,11 +49,6 @@ pub fn handler(ctx: Context<ClaimUserCollateralInterest>) -> Result<()> {
     )?;
 
     // 3. transfer from vault to owner
-    let signer_seeds: &[&[&[u8]]] = &[&[
-        VaultState::NAMESPACE.as_ref(),
-        ctx.accounts.vault_state.whirlpool.as_ref(),
-        &[ctx.accounts.vault_state.bump],
-    ]];
     token_cpi::transfer(
         CpiContext::new(
             ctx.accounts.token_program.to_account_info(),
@@ -63,7 +58,7 @@ pub fn handler(ctx: Context<ClaimUserCollateralInterest>) -> Result<()> {
                 authority: ctx.accounts.vault_state.to_account_info(),
             },
         )
-        .with_signer(signer_seeds),
+        .with_signer(&[&ctx.accounts.vault_state.get_signer_seeds()]),
         collateral_interest_claimable,
     )?;
 

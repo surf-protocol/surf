@@ -12,7 +12,7 @@ import {
 	increaseLiquidityQuoteByInputTokenWithParams,
 } from '@orca-so/whirlpools-sdk'
 import { getAssociatedTokenAddressSync } from '@solana/spl-token'
-import { Keypair, PublicKey } from '@solana/web3.js'
+import { Keypair, PublicKey, TransactionInstruction } from '@solana/web3.js'
 import Decimal from 'decimal.js'
 import BN from 'bn.js'
 
@@ -36,68 +36,82 @@ export const DEFAULT_POOL_SQRT_PRICE = PriceMath.priceToSqrtPriceX64(
 	baseTokenDecimals,
 	quoteTokenDecimals,
 )
-export const DEFAULT_TICK_INDEX = PriceMath.sqrtPriceX64ToTickIndex(DEFAULT_POOL_SQRT_PRICE)
-export const DEFAULT_START_TICK = TickUtil.getStartTickIndex(
-	DEFAULT_TICK_INDEX,
-	DEFAULT_TICK_SPACING,
-)
 
 export const whirlpoolProgram = WhirlpoolContext.withProvider(
 	provider,
 	ORCA_WHIRLPOOL_PROGRAM_ID,
 ).program
 
-export const buildInitTickArrayIx = (startTickIndex: number, whirlpoolKey: PublicKey) => {
-	const tickArrayPda = PDAUtil.getTickArray(
-		ORCA_WHIRLPOOL_PROGRAM_ID,
-		whirlpoolKey,
-		startTickIndex,
-	)
-	const ix = WhirlpoolIx.initTickArrayIx(whirlpoolProgram, {
-		tickArrayPda,
-		startTick: startTickIndex,
-		whirlpool: whirlpoolKey,
-		funder: wallet.publicKey,
-	}).instructions[0]
-	return { ix, tickArrayPda }
+type MockTickIndexesParams = {
+	whirlpoolAddress: PublicKey
+	upperTickInitializable: number
+	lowerTickInitializable: number
+	tickSpacing: number
 }
 
-export const initTickArray = async (
-	startTickIndex: number,
-	whirlpoolKey: PublicKey,
-	log = false,
-) => {
-	const { tickArrayPda, ix } = buildInitTickArrayIx(startTickIndex, whirlpoolKey)
-	await buildAndSendTx(connection, [wallet], [ix], log)
+export const mockBoundariesTickArrays = async ({
+	whirlpoolAddress,
+	upperTickInitializable,
+	lowerTickInitializable,
+	tickSpacing,
+}: MockTickIndexesParams) => {
+	const upperStartTick = TickUtil.getStartTickIndex(upperTickInitializable, tickSpacing)
+	const lowerStartTick = TickUtil.getStartTickIndex(lowerTickInitializable, tickSpacing)
+
+	const tickArraysPDAs: PublicKey[] = []
+	const ixs: TransactionInstruction[] = []
+
+	;[upperStartTick, lowerStartTick].forEach((st) => {
+		const tickArrayPDA = PDAUtil.getTickArray(ORCA_WHIRLPOOL_PROGRAM_ID, whirlpoolAddress, st)
+		console.log(tickArrayPDA.publicKey.toString())
+		tickArraysPDAs.push(tickArrayPDA.publicKey)
+		ixs.push(
+			WhirlpoolIx.initTickArrayIx(whirlpoolProgram, {
+				tickArrayPda: tickArrayPDA,
+				startTick: st,
+				funder: wallet.publicKey,
+				whirlpool: whirlpoolAddress,
+			}).instructions[0],
+		)
+	})
+
+	const res = await buildAndSendTx(connection, [wallet], ixs)
+
 	return {
-		tickArrayPda,
+		upperTickArrayAddress: tickArraysPDAs[0],
+		lowerTickArrayAddress: tickArraysPDAs[1],
+		res,
 	}
 }
 
-export const initProvidedTickArrays = async (
-	initializableTickIndexes: number[],
-	whirlpoolKey: PublicKey,
-) => Promise.all(initializableTickIndexes.map((ti) => initTickArray(ti, whirlpoolKey)))
+export const initTickArrays = async (
+	whirlpoolAddress: PublicKey,
+	startTickIndex: number,
+	tickSpacing: number,
+) => {
+	const buildIx = (st: number) => {
+		const tickArrayPda = PDAUtil.getTickArray(ORCA_WHIRLPOOL_PROGRAM_ID, whirlpoolAddress, st)
+		const ix = WhirlpoolIx.initTickArrayIx(whirlpoolProgram, {
+			tickArrayPda,
+			startTick: st,
+			whirlpool: whirlpoolAddress,
+			funder: wallet.publicKey,
+		}).instructions[0]
+		return { ix, tickArrayPda }
+	}
 
-// Init tick arrays
-export const initTickArrays = async (whirlpoolKey: PublicKey) => {
-	const { tickArrayPda } = await initTickArray(DEFAULT_START_TICK, whirlpoolKey)
+	const { tickArrayPda, ix } = buildIx(startTickIndex)
+	await buildAndSendTx(connection, [wallet], [ix])
 
-	const ticksInArray = DEFAULT_TICK_SPACING * TICK_ARRAY_SIZE
+	const ticksInArray = tickSpacing * TICK_ARRAY_SIZE
 	const tickArraysPDAs: Record<number, PDA> = { 0: tickArrayPda }
 
 	for (let i = 1; i <= 3; i++) {
-		const startUpperTickIndex = DEFAULT_START_TICK + i * ticksInArray
-		const startLowerTickIndex = DEFAULT_START_TICK - i * ticksInArray
+		const startUpperTickIndex = startTickIndex + i * ticksInArray
+		const startLowerTickIndex = startTickIndex - i * ticksInArray
 
-		const { ix: upperIx, tickArrayPda: upperPDA } = buildInitTickArrayIx(
-			startUpperTickIndex,
-			whirlpoolKey,
-		)
-		const { ix: lowerIx, tickArrayPda: lowerPDA } = buildInitTickArrayIx(
-			startLowerTickIndex,
-			whirlpoolKey,
-		)
+		const { ix: upperIx, tickArrayPda: upperPDA } = buildIx(startUpperTickIndex)
+		const { ix: lowerIx, tickArrayPda: lowerPDA } = buildIx(startLowerTickIndex)
 		await buildAndSendTx(connection, [wallet], [upperIx, lowerIx])
 
 		tickArraysPDAs[i] = upperPDA
@@ -107,8 +121,78 @@ export const initTickArrays = async (whirlpoolKey: PublicKey) => {
 	return tickArraysPDAs
 }
 
-// Init whirlpool
-export const mockWhirlpool = async () => {
+const fundPosition = async (
+	baseTokenAmount: BN,
+	startTick: number,
+	tickSpacing: number,
+	whirlpoolAddress: PublicKey,
+	whirlpoolData: WhirlpoolData,
+	tickArrays: Record<number, PDA>,
+) => {
+	const positionMintKeyPair = new Keypair()
+	const positionATA = getAssociatedTokenAddressSync(
+		positionMintKeyPair.publicKey,
+		wallet.publicKey,
+		false,
+	)
+	const positionPDA = PDAUtil.getPosition(
+		ORCA_WHIRLPOOL_PROGRAM_ID,
+		positionMintKeyPair.publicKey,
+	)
+
+	const ticksInArray = tickSpacing * TICK_ARRAY_SIZE
+	const upperTickIndex = startTick + 3 * ticksInArray
+	const lowerTickIndex = startTick - 3 * ticksInArray
+	const openPositionIx = WhirlpoolIx.openPositionIx(whirlpoolProgram, {
+		whirlpool: whirlpoolAddress,
+		owner: wallet.publicKey,
+		positionPda: positionPDA,
+		positionMintAddress: positionMintKeyPair.publicKey,
+		positionTokenAccount: positionATA,
+		tickLowerIndex: lowerTickIndex,
+		tickUpperIndex: upperTickIndex,
+		funder: wallet.publicKey,
+	}).instructions
+	const increaseLiquidityQuote = increaseLiquidityQuoteByInputTokenWithParams({
+		inputTokenAmount: baseTokenAmount,
+		inputTokenMint: baseTokenMint,
+		tokenMintA: whirlpoolData.tokenMintA,
+		tokenMintB: whirlpoolData.tokenMintB,
+		tickCurrentIndex: whirlpoolData.tickCurrentIndex,
+		sqrtPrice: whirlpoolData.sqrtPrice,
+		slippageTolerance: new Percentage(new BN(25), new BN(10000)),
+		tickLowerIndex: lowerTickIndex,
+		tickUpperIndex: upperTickIndex,
+	})
+	const increaseLiquidityIx = WhirlpoolIx.increaseLiquidityIx(whirlpoolProgram, {
+		...increaseLiquidityQuote,
+		...whirlpoolData,
+		position: positionPDA.publicKey,
+		positionTokenAccount: positionATA,
+		whirlpool: whirlpoolAddress,
+		positionAuthority: wallet.publicKey,
+		tokenOwnerAccountA: baseTokenUserATA,
+		tokenOwnerAccountB: quoteTokenUserATA,
+		tickArrayLower: tickArrays[-3].publicKey,
+		tickArrayUpper: tickArrays[3].publicKey,
+	}).instructions
+
+	await buildAndSendTx(
+		connection,
+		[wallet, positionMintKeyPair],
+		[...openPositionIx, ...increaseLiquidityIx],
+	)
+}
+
+type MockWhirlpoolParams = {
+	tickSpacing?: number
+	mockBaseTokenAmount?: BN
+}
+
+export const mockWhirlpool = async ({
+	tickSpacing = DEFAULT_TICK_SPACING,
+	mockBaseTokenAmount,
+}: MockWhirlpoolParams = {}) => {
 	const configKeyPairs = {
 		feeAuthorityKeypair: Keypair.generate(),
 		collectProtocolFeesAuthorityKeypair: Keypair.generate(),
@@ -128,14 +212,14 @@ export const mockWhirlpool = async () => {
 	const feeTierPda = PDAUtil.getFeeTier(
 		ORCA_WHIRLPOOL_PROGRAM_ID,
 		whirlpoolsConfigKeypair.publicKey,
-		DEFAULT_TICK_SPACING,
+		tickSpacing,
 	)
 	const { instructions: initFeeTierIx } = WhirlpoolIx.initializeFeeTierIx(whirlpoolProgram, {
 		whirlpoolsConfig: whirlpoolsConfigKeypair.publicKey,
 		funder: wallet.publicKey,
 		feeAuthority: configKeyPairs.feeAuthorityKeypair.publicKey,
 		feeTierPda,
-		tickSpacing: DEFAULT_TICK_SPACING,
+		tickSpacing: tickSpacing,
 		defaultFeeRate: DEFAULT_FEE_RATE,
 	})
 
@@ -147,18 +231,24 @@ export const mockWhirlpool = async () => {
 		whirlpoolsConfigKeypair.publicKey,
 		baseTokenMint,
 		quoteTokenMint,
-		DEFAULT_TICK_SPACING,
+		tickSpacing,
+	)
+
+	const defaultSqrtPrice = PriceMath.priceToSqrtPriceX64(
+		new Decimal(DEFAULT_POOL_PRICE),
+		baseTokenDecimals,
+		quoteTokenDecimals,
 	)
 
 	const { instructions: initPoolIx } = WhirlpoolIx.initializePoolIx(whirlpoolProgram, {
 		feeTierKey: feeTierPda.publicKey,
-		tickSpacing: DEFAULT_TICK_SPACING,
+		tickSpacing: tickSpacing,
 		funder: wallet.publicKey,
 		whirlpoolsConfig: whirlpoolsConfigKeypair.publicKey,
 		whirlpoolPda: whirlpoolPDA,
 		tokenMintA: baseTokenMint,
 		tokenMintB: quoteTokenMint,
-		initSqrtPrice: DEFAULT_POOL_SQRT_PRICE,
+		initSqrtPrice: defaultSqrtPrice,
 		tokenVaultAKeypair,
 		tokenVaultBKeypair,
 	})
@@ -182,75 +272,28 @@ export const mockWhirlpool = async () => {
 		throw Error('Missing whirlpool data')
 	}
 
-	const tickArrays = await initTickArrays(whirlpoolPDA.publicKey)
-	const oracleKey = PDAUtil.getOracle(ORCA_WHIRLPOOL_PROGRAM_ID, whirlpoolPDA.publicKey)
+	const defaultTickIndex = PriceMath.sqrtPriceX64ToTickIndex(defaultSqrtPrice)
+	const startTickIndex = TickUtil.getStartTickIndex(defaultTickIndex, tickSpacing)
+	const tickArrays = await initTickArrays(whirlpoolPDA.publicKey, startTickIndex, tickSpacing)
+	const oracleAddress = PDAUtil.getOracle(ORCA_WHIRLPOOL_PROGRAM_ID, whirlpoolPDA.publicKey)
+
+	if (mockBaseTokenAmount) {
+		await fundPosition(
+			mockBaseTokenAmount,
+			startTickIndex,
+			tickSpacing,
+			whirlpoolPDA.publicKey,
+			whirlpoolData,
+			tickArrays,
+		)
+	}
 
 	return {
 		tickArrays,
 		whirlpoolData,
-		oracleAddress: oracleKey.publicKey,
+		oracleAddress: oracleAddress.publicKey,
 		whirlpoolAddress: whirlpoolPDA.publicKey,
+		whirlpoolBaseTokenVaultAddress: tokenVaultAKeypair.publicKey,
+		whirlpoolQuoteTokenVaultAddress: tokenVaultBKeypair.publicKey,
 	}
-}
-
-// Create and fund dummy position
-export const fundPosition = async (
-	inputQuoteAmount: BN,
-	whirlpoolKey: PublicKey,
-	whirlpoolData: WhirlpoolData,
-	tickArrays: Record<number, PDA>,
-) => {
-	const positionMintKeyPair = new Keypair()
-	const positionATA = getAssociatedTokenAddressSync(
-		positionMintKeyPair.publicKey,
-		wallet.publicKey,
-		false,
-	)
-	const positionPDA = PDAUtil.getPosition(
-		ORCA_WHIRLPOOL_PROGRAM_ID,
-		positionMintKeyPair.publicKey,
-	)
-
-	const ticksInArray = DEFAULT_TICK_SPACING * TICK_ARRAY_SIZE
-	const upperTickIndex = DEFAULT_START_TICK + 3 * ticksInArray
-	const lowerTickIndex = DEFAULT_START_TICK - 3 * ticksInArray
-	const openPositionIx = WhirlpoolIx.openPositionIx(whirlpoolProgram, {
-		whirlpool: whirlpoolKey,
-		owner: wallet.publicKey,
-		positionPda: positionPDA,
-		positionMintAddress: positionMintKeyPair.publicKey,
-		positionTokenAccount: positionATA,
-		tickLowerIndex: lowerTickIndex,
-		tickUpperIndex: upperTickIndex,
-		funder: wallet.publicKey,
-	}).instructions
-	const increaseLiquidityQuote = increaseLiquidityQuoteByInputTokenWithParams({
-		inputTokenAmount: inputQuoteAmount,
-		inputTokenMint: quoteMintKeyPair.publicKey,
-		tokenMintA: whirlpoolData.tokenMintA,
-		tokenMintB: whirlpoolData.tokenMintB,
-		tickCurrentIndex: DEFAULT_TICK_INDEX,
-		sqrtPrice: DEFAULT_POOL_SQRT_PRICE,
-		slippageTolerance: new Percentage(new BN(25), new BN(10000)),
-		tickLowerIndex: lowerTickIndex,
-		tickUpperIndex: upperTickIndex,
-	})
-	const increaseLiquidityIx = WhirlpoolIx.increaseLiquidityIx(whirlpoolProgram, {
-		...increaseLiquidityQuote,
-		...whirlpoolData,
-		position: positionPDA.publicKey,
-		positionTokenAccount: positionATA,
-		whirlpool: whirlpoolKey,
-		positionAuthority: wallet.publicKey,
-		tokenOwnerAccountA: baseTokenUserATA,
-		tokenOwnerAccountB: quoteTokenUserATA,
-		tickArrayLower: tickArrays[-3].publicKey,
-		tickArrayUpper: tickArrays[3].publicKey,
-	}).instructions
-
-	await buildAndSendTx(
-		connection,
-		[wallet, positionMintKeyPair],
-		[...openPositionIx, ...increaseLiquidityIx],
-	)
 }

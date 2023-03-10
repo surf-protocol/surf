@@ -199,7 +199,11 @@ describe('open_whirlpool_position', () => {
 		const { vaultStateAddress } = await mockVaultState({ whirlpoolAddress, adminConfigAddress })
 
 		await mockVaultWhirlpoolPosition({ vaultStateAddress, whirlpoolAddress, id: 0 })
-		const res = await mockVaultWhirlpoolPosition({ vaultStateAddress, whirlpoolAddress, id: 1 })
+		const { res } = await mockVaultWhirlpoolPosition({
+			vaultStateAddress,
+			whirlpoolAddress,
+			id: 1,
+		})
 
 		expect(res.status).toBe('ERROR')
 	})

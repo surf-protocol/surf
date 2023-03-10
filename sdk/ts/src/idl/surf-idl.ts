@@ -197,13 +197,13 @@ export type SurfIDL = {
 			name: 'openHedgePosition'
 			accounts: [
 				{
-					name: 'payer'
+					name: 'owner'
 					isMut: true
 					isSigner: true
 				},
 				{
 					name: 'vaultState'
-					isMut: false
+					isMut: true
 					isSigner: false
 				},
 				{
@@ -291,6 +291,48 @@ export type SurfIDL = {
 			args: []
 		},
 		{
+			name: 'openUserPosition'
+			accounts: [
+				{
+					name: 'owner'
+					isMut: true
+					isSigner: true
+				},
+				{
+					name: 'userPosition'
+					isMut: true
+					isSigner: false
+				},
+				{
+					name: 'vaultState'
+					isMut: false
+					isSigner: false
+				},
+				{
+					name: 'systemProgram'
+					isMut: false
+					isSigner: false
+				},
+			]
+			args: []
+		},
+		{
+			name: 'closeUserPosition'
+			accounts: [
+				{
+					name: 'owner'
+					isMut: false
+					isSigner: true
+				},
+				{
+					name: 'userPosition'
+					isMut: true
+					isSigner: false
+				},
+			]
+			args: []
+		},
+		{
 			name: 'increaseLiquidity'
 			accounts: [
 				{
@@ -315,7 +357,7 @@ export type SurfIDL = {
 				},
 				{
 					name: 'vaultState'
-					isMut: false
+					isMut: true
 					isSigner: false
 				},
 				{
@@ -345,17 +387,17 @@ export type SurfIDL = {
 				},
 				{
 					name: 'whirlpool'
-					isMut: false
+					isMut: true
 					isSigner: false
 				},
 				{
 					name: 'whirlpoolBaseTokenAccount'
-					isMut: false
+					isMut: true
 					isSigner: false
 				},
 				{
 					name: 'whirlpoolQuoteTokenAccount'
-					isMut: false
+					isMut: true
 					isSigner: false
 				},
 				{
@@ -575,7 +617,7 @@ export type SurfIDL = {
 				},
 				{
 					name: 'driftBorrowSpotMarket'
-					isMut: false
+					isMut: true
 					isSigner: false
 				},
 				{
@@ -585,7 +627,7 @@ export type SurfIDL = {
 				},
 				{
 					name: 'driftCollateralSpotMarket'
-					isMut: false
+					isMut: true
 					isSigner: false
 				},
 				{
@@ -666,7 +708,7 @@ export type SurfIDL = {
 				},
 				{
 					name: 'vaultState'
-					isMut: false
+					isMut: true
 					isSigner: false
 				},
 				{
@@ -716,7 +758,7 @@ export type SurfIDL = {
 				},
 				{
 					name: 'driftBorrowSpotMarket'
-					isMut: false
+					isMut: true
 					isSigner: false
 				},
 				{
@@ -726,7 +768,7 @@ export type SurfIDL = {
 				},
 				{
 					name: 'driftCollateralSpotMarket'
-					isMut: false
+					isMut: true
 					isSigner: false
 				},
 				{
@@ -792,8 +834,8 @@ export type SurfIDL = {
 			]
 			args: [
 				{
-					name: 'borrowAmount'
-					type: 'u64'
+					name: 'factor'
+					type: 'u16'
 				},
 			]
 		},
@@ -1623,7 +1665,9 @@ export type SurfIDL = {
 				fields: [
 					{
 						name: 'bump'
-						type: 'u8'
+						type: {
+							array: ['u8', 1]
+						}
 					},
 					{
 						name: 'whirlpool'
@@ -1976,121 +2020,126 @@ export type SurfIDL = {
 		},
 		{
 			code: 6027
+			name: 'InvalidFactor'
+			msg: 'Invalid factor, factor has be higher than 0 and lower or equal to 10000'
+		},
+		{
+			code: 6028
 			name: 'ZeroLiquidity'
 			msg: 'User position does not have any liquidity'
 		},
 		{
-			code: 6028
+			code: 6029
 			name: 'InvalidLiquidity'
 			msg: 'User position liquidity is lower than provided liquidity'
 		},
 		{
-			code: 6029
+			code: 6030
 			name: 'ZeroCollateral'
 			msg: 'User position does not have any collateral'
 		},
 		{
-			code: 6030
+			code: 6031
 			name: 'ZeroBorrow'
 			msg: 'User position does not have any borrow'
 		},
 		{
-			code: 6031
+			code: 6032
 			name: 'InvalidBorrowAmount'
 			msg: 'Borrow amount must be lower or equal to the user borrow'
 		},
 		{
-			code: 6032
+			code: 6033
 			name: 'ZeroBaseTokenWhirlpoolAmount'
 			msg: 'Current base token amount in whirlpool is zero, can not hedge 0'
 		},
 		{
-			code: 6033
+			code: 6034
 			name: 'CollateralOverflow'
 			msg: 'Collateral amount overflow'
 		},
 		{
-			code: 6034
+			code: 6035
 			name: 'BorrowOverflow'
 			msg: 'Borrow amount overflow'
 		},
 		{
-			code: 6035
+			code: 6036
 			name: 'BorrowNotionalOverflow'
 			msg: 'Borrow amount notional overflow'
 		},
 		{
-			code: 6036
+			code: 6037
 			name: 'BorrowAmountTooHigh'
 			msg: 'Borrow amount amount is higher than current whirlpool base token amount'
 		},
 		{
-			code: 6037
+			code: 6038
 			name: 'CollateralInterestOverflow'
 			msg: 'Collateral interest overflow'
 		},
 		{
-			code: 6038
+			code: 6039
 			name: 'BorrowInterestOverflow'
 			msg: 'Borrow interest overflow'
 		},
 		{
-			code: 6039
+			code: 6040
 			name: 'SqrtPriceNotOutOfBounds'
 			msg: 'Sqrt price is not out of bounds'
 		},
 		{
-			code: 6040
+			code: 6041
 			name: 'HedgePositionNotOutOfHedgeTickRange'
 			msg: 'Hedge position can not be adjusted until it is not out of hedge tick range'
 		},
 		{
-			code: 6041
+			code: 6042
 			name: 'InvalidWhirlpoolAdjustmentState'
 			msg: 'Whirlpool adjustment is not valid'
 		},
 		{
-			code: 6042
+			code: 6043
 			name: 'MissingNextHedgePositionAccount'
 			msg: 'Missing next hedge position account'
 		},
 		{
-			code: 6043
+			code: 6044
 			name: 'BaseTokenOverflow'
 			msg: 'Input quote amount is too high'
 		},
 		{
-			code: 6044
+			code: 6045
 			name: 'LiquidityOverflow'
 			msg: 'Liquidity overflow'
 		},
 		{
-			code: 6045
+			code: 6046
 			name: 'LiquidityDiffTooHigh'
 			msg: 'Liquidity diff is too high'
 		},
 		{
-			code: 6046
+			code: 6047
 			name: 'TokenMaxExceeded'
 			msg: 'Exceeded token max'
 		},
 		{
-			code: 6047
+			code: 6048
 			name: 'NumberDownCastError'
 			msg: 'Unable to down cast number'
 		},
 		{
-			code: 6048
+			code: 6049
 			name: 'MultiplicationOverflow'
 			msg: 'Multiplication overflow'
 		},
 		{
-			code: 6049
+			code: 6050
 			name: 'MultiplicationShiftRightOverflow'
 			msg: 'Multiplication with shift right overflow'
 		},
 		{
-			code: 6050
+			code: 6051
 			name: 'MathError'
 			msg: 'Drift math error'
 		},
